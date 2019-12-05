@@ -15,6 +15,18 @@ namespace FFmpegWrapper.Container
         /// <summary> Timestamp scale in seconds. </summary>
         public double TimeScale => ffmpeg.av_q2d(Stream->time_base);
 
+        /// <summary> </summary>
+        public AVRational TimeBase => Stream->time_base;
+
+        /// <summary> Pts of the first frame of the stream in presentation order, in stream time base. </summary>
+        public long? StartTime
+        {
+            get {
+                long st = Stream->start_time;
+                return st == ffmpeg.AV_NOPTS_VALUE ? (long?)null : st;
+            }
+        }
+
         public CodecBase Codec { get; private set; }
 
         public MediaStreamMode Mode { get; }

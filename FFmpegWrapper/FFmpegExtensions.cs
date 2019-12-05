@@ -2,7 +2,7 @@
 
 namespace FFmpegWrapper
 {
-    public static class Extensions
+    public static class FFmpegExtensions
     {
         public static double ToDouble(this AVRational avr)
         {
