@@ -1,4 +1,5 @@
 ﻿using System;
+using FFmpeg.AutoGen;
 
 namespace FFmpegWrapper.Container
 {
@@ -6,32 +7,43 @@ namespace FFmpegWrapper.Container
     {
         //General
         Mp4,
+        Mov,
         Matroska,
         WebM,
-        Mov,
 
         //Audio
         Mp3,
         Ogg,
         Flac,
+        M4a,
         Wav
     }
     public static class ContainerTypeEx
     {
         public static string GetExtension(this ContainerType container)
         {
-            switch (container) {
-                case ContainerType.Mp4:        return "mp4";
-                case ContainerType.Matroska:   return "mkv";
-                case ContainerType.WebM:       return "webm";
-                case ContainerType.Mov:        return "mov";
+            return container switch
+            {
+                ContainerType.Mp4       => "mp4",
+                ContainerType.Mov       => "mov",
+                ContainerType.Matroska  => "mkv",
+                ContainerType.WebM      => "webm",
 
-                case ContainerType.Mp3:        return "mp3";
-                case ContainerType.Ogg:        return "ogg";
-                case ContainerType.Flac:       return "flac";
-                case ContainerType.Wav:        return "wav";
-                default: throw new ArgumentException();
+                ContainerType.Mp3       => "mp3",
+                ContainerType.Ogg       => "ogg",
+                ContainerType.Flac      => "flac",
+                ContainerType.M4a       => "m4a",
+                ContainerType.Wav       => "wav",
+                _ => throw new ArgumentException(),
+            };
+        }
+        public static unsafe AVOutputFormat* GetOutputFormat(this ContainerType type)
+        {
+            var fmt = ffmpeg.av_guess_format(null, "dummy." + type.GetExtension(), null);
+            if (fmt == null) {
+                throw new NotSupportedException();
             }
+            return fmt;
         }
     }
 }

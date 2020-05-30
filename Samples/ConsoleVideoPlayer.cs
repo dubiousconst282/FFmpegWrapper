@@ -46,7 +46,7 @@ namespace Samples
 
                 //Decode
                 _decoder.SendPacket(pkt);
-                while (_decoder.ReceiveFrame(_srcPic, out long timestamp).IsSuccess()) {
+                while (_decoder.ReceiveFrame(_srcPic).IsSuccess()) {
                     //Rescale & display
                     _sws.Scale(_srcPic, _dstPic);
                     DisplayFrame(_dstPic);

@@ -38,18 +38,25 @@ namespace FFmpegWrapper.Codec
         {
             var mem = pkt.Data;
             fixed (byte* pData = mem.Span) {
-                AVPacket* p = stackalloc AVPacket[1];
-                p->size = mem.Length;
-                p->data = pData;
+                var p = new AVPacket {
+                    size = mem.Length,
+                    data = pData,
 
-                p->pts = pkt.PresentationTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
-                p->dts = pkt.DecompressionTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
-                p->duration = pkt.Duration;
-
-                return SendPacket(p, throwOnError);
+                    pts = pkt.PresentationTimestamp ?? ffmpeg.AV_NOPTS_VALUE,
+                    dts = pkt.DecompressionTimestamp ?? ffmpeg.AV_NOPTS_VALUE,
+                    duration = pkt.Duration
+                };
+                return SendPacket(&p, throwOnError);
             }
         }
 
+        public LavResult ReceiveFrame(MediaFrame frame)
+        {
+            if (frame == null) {
+                throw new ArgumentNullException(nameof(frame));
+            }
+            return ReceiveFrame(frame.Frame);
+        }
         public LavResult ReceiveFrame(AVFrame* frame)
         {
             return (LavResult)ffmpeg.avcodec_receive_frame(Context, frame);

@@ -57,19 +57,5 @@ namespace FFmpegWrapper.Codec
             }
             return new AudioFrame(AudioFormat, size);
         }
-
-        public LavResult ReceiveFrame(AudioFrame frame, out long timestamp)
-        {
-            if (frame == null) throw new ArgumentNullException();
-            timestamp = 0;
-
-            AVFrame* avFrame = frame.Frame;
-
-            var result = ReceiveFrame(avFrame);
-            if (result.IsSuccess()) {
-                timestamp = avFrame->pts;
-            }
-            return result;
-        }
     }
 }

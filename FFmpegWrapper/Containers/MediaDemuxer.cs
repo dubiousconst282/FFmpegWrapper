@@ -91,17 +91,17 @@ namespace FFmpegWrapper.Container
         }
         public LavResult Read(MediaPacket packet)
         {
-            AVPacket* pkt = stackalloc AVPacket[1];
+            var pkt = new AVPacket();
             try {
-                LavResult result = Read(pkt);
+                LavResult result = Read(&pkt);
 
                 if (result.IsSuccess()) {
-                    packet.SetData(pkt);
+                    packet.SetData(&pkt);
                 }
 
                 return result;
             } finally {
-                ffmpeg.av_packet_unref(pkt);
+                ffmpeg.av_packet_unref(&pkt);
             }
         }
 

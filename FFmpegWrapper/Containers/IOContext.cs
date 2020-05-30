@@ -6,6 +6,11 @@ namespace FFmpegWrapper.Container
 {
     public abstract unsafe class IOContext : IDisposable
     {
+        protected const int SEEK_SET = 0;
+        protected const int SEEK_CUR = 1;
+        protected const int SEEK_END = 2;
+        protected const int AVSEEK_SIZE = ffmpeg.AVSEEK_SIZE;
+
         private AVIOContext* _ctx;
         public AVIOContext* Context
         {
@@ -68,7 +73,7 @@ namespace FFmpegWrapper.Container
         /// <summary>Sets the position of the underlying stream.</summary>
         /// <param name="opaque">Unused. Always null.</param>
         /// <param name="offset">The new offset.</param>
-        /// <param name="whence">Seek origin. May be one of SEEK_SET(0), SEEK_CUR(1), SEEK_END(2) or ffmpeg.AVSEEK_SIZE</param>
+        /// <param name="whence">Seek origin. May be one of SEEK_SET(0), SEEK_CUR(1), SEEK_END(2) or AVSEEK_SIZE</param>
         protected abstract long Seek(void* opaque, long offset, int whence);
 
         protected void ThrowIfDisposed()

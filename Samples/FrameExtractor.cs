@@ -36,8 +36,8 @@ namespace Samples
                     }
                     decoder.SendPacket(pkt);
 
-                    while (decoder.ReceiveFrame(frame, out long pts).IsSuccess()) {
-                        var ts = TimeSpan.FromSeconds(pts * stream.TimeScale);
+                    while (decoder.ReceiveFrame(frame).IsSuccess()) {
+                        var ts = TimeSpan.FromSeconds(frame.PresentationTimestamp.Value * stream.TimeScale);
                         frame.Save($"frames/{frameNum++}.jpg");
                     }
                 }

@@ -28,21 +28,20 @@ namespace FFmpegWrapper.Container
         public bool IsOpen { get; private set; } = false;
 
         public MediaMuxer(IOContext ioContext, ContainerType format, bool leaveOpen = true)
+            : this(ioContext, format.GetOutputFormat(), leaveOpen)
+        {
+        }
+        public MediaMuxer(IOContext ioContext, AVOutputFormat* format, bool leaveOpen = true)
         {
             _leaveIoCtxOpen = leaveOpen;
             IOContext = ioContext;
 
-            var outFormat = ffmpeg.av_guess_format(null, "dummy." + format.GetExtension(), null);
-
-            if (outFormat == null) {
-                throw new ArgumentException("Unknown format");
-            }
             try {
                 _ctx = ffmpeg.avformat_alloc_context();
                 if (_ctx == null) {
                     throw new OutOfMemoryException("Could not allocate muxer");
                 }
-                _ctx->oformat = outFormat;
+                _ctx->oformat = format;
                 _ctx->pb = ioContext.Context;
             } catch {
                 ffmpeg.avformat_free_context(_ctx);
@@ -115,21 +114,20 @@ namespace FFmpegWrapper.Container
             ThrowIfDisposed();
             ThrowIfNotOpen();
 
-            AVPacket* pkt = stackalloc AVPacket[1];
+            var pkt = new AVPacket();
 
             var mem = packet.Data;
             fixed (byte* pData = mem.Span) {
-                pkt->stream_index = stream.Index;
-                pkt->data = pData;
-                pkt->size = mem.Length;
+                pkt.stream_index = stream.Index;
+                pkt.data = pData;
+                pkt.size = mem.Length;
 
-                pkt->pts = packet.PresentationTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
-                pkt->dts = packet.DecompressionTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
-                pkt->duration = packet.Duration;
+                pkt.pts = packet.PresentationTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
+                pkt.dts = packet.DecompressionTimestamp ?? ffmpeg.AV_NOPTS_VALUE;
+                pkt.duration = packet.Duration;
 
-                ffmpeg.av_packet_rescale_ts(pkt, stream.Codec.TimeBase, stream.Stream->time_base);
-
-                ffmpeg.av_interleaved_write_frame(_ctx, pkt);
+                ffmpeg.av_packet_rescale_ts(&pkt, stream.Codec.TimeBase, stream.Stream->time_base);
+                ffmpeg.av_interleaved_write_frame(_ctx, &pkt).CheckError("Failed to write frame");
             }
         }
         public void Write(AVPacket* packet)
@@ -137,7 +135,7 @@ namespace FFmpegWrapper.Container
             ThrowIfDisposed();
             ThrowIfNotOpen();
 
-            ffmpeg.av_interleaved_write_frame(_ctx, packet).CheckError();
+            ffmpeg.av_interleaved_write_frame(_ctx, packet).CheckError("Failed to write frame");
         }
 
         private void ThrowIfNotOpen()

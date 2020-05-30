@@ -4,17 +4,8 @@ using FFmpeg.AutoGen;
 
 namespace FFmpegWrapper
 {
-    public unsafe class AudioFrame : IDisposable
+    public unsafe class AudioFrame : MediaFrame
     {
-        private AVFrame* _frame;
-        public AVFrame* Frame
-        {
-            get {
-                ThrowIfDisposed();
-                return _frame;
-            }
-        }
-
         public AudioFormat Format => new AudioFormat(Frame);
 
         public AVSampleFormat SampleFormat => (AVSampleFormat)Frame->format;
@@ -33,7 +24,7 @@ namespace FFmpegWrapper
             get => Frame->nb_samples;
             set {
                 if (value < 0 || value > Capacity) {
-                    throw new ArgumentOutOfRangeException(nameof(value), "Must must be positive and not exceed the capacity.");
+                    throw new ArgumentOutOfRangeException(nameof(value), "Must must be positive and not exceed the frame capacity.");
                 }
                 Frame->nb_samples = value;
             }
@@ -41,9 +32,6 @@ namespace FFmpegWrapper
 
         /// <summary> Maximum number of samples this frame can hold. </summary>
         public int Capacity { get; }
-
-        private readonly bool _ownFrame = true;
-        private bool _disposed = false;
 
         public AudioFrame(AudioFormat fmt, int capacity)
         {
@@ -71,7 +59,7 @@ namespace FFmpegWrapper
         /// Wraps an existing <see cref="AVFrame"/> into an <see cref="AudioFrame"/> instance.<br></br>
         /// Note: You should not use this object after the AVFrame is freed.
         /// </summary>
-        /// <param name="freeOnDispose">True if the AVFrame should be freed when the Dispose() method is called.</param>
+        /// <param name="freeOnDispose">True if the AVFrame should be freed when Dispose() is called.</param>
         /// <param name="capacity">Overrides the Capacity property, if greater than 0.</param>
         public AudioFrame(AVFrame* frame, bool freeOnDispose = false, int capacity = -1)
         {
@@ -144,7 +132,7 @@ namespace FFmpegWrapper
 
         public float GetSampleFloat(int pos, int ch)
         {
-            ValidateGetSetSampleParams(pos, ch, out var fmt);
+            ValidateParams(pos, ch, out var fmt);
 
             switch (fmt) {
                 case AVSampleFormat.AV_SAMPLE_FMT_FLT:
@@ -160,7 +148,7 @@ namespace FFmpegWrapper
         }
         public short GetSampleShort(int pos, int ch)
         {
-            ValidateGetSetSampleParams(pos, ch, out var fmt);
+            ValidateParams(pos, ch, out var fmt);
 
             switch (fmt) {
                 case AVSampleFormat.AV_SAMPLE_FMT_FLT:
@@ -177,7 +165,7 @@ namespace FFmpegWrapper
 
         public void SetSampleFloat(int pos, int ch, float s)
         {
-            ValidateGetSetSampleParams(pos, ch, out var fmt);
+            ValidateParams(pos, ch, out var fmt);
 
             switch (fmt) {
                 case AVSampleFormat.AV_SAMPLE_FMT_FLT:
@@ -195,7 +183,7 @@ namespace FFmpegWrapper
         }
         public void SetSampleShort(int pos, int ch, short s)
         {
-            ValidateGetSetSampleParams(pos, ch, out var fmt);
+            ValidateParams(pos, ch, out var fmt);
 
             switch (fmt) {
                 case AVSampleFormat.AV_SAMPLE_FMT_FLT:
@@ -212,7 +200,7 @@ namespace FFmpegWrapper
             }
         }
 
-        private void ValidateGetSetSampleParams(int pos, int ch, out AVSampleFormat sampleFmt)
+        private void ValidateParams(int pos, int ch, out AVSampleFormat sampleFmt)
         {
             ThrowIfDisposed();
             var frame = _frame;
@@ -230,7 +218,7 @@ namespace FFmpegWrapper
             float** p = (float**)_frame->extended_data;
 
             return IsPlanar ? p[ch][pos]
-                            : p[0][pos * Channels + ch];
+                            : p[0][pos * _frame->channels + ch];
         }
         /// <summary> 
         /// Gets a 16-bit sample at the specified position and channel. 
@@ -240,7 +228,7 @@ namespace FFmpegWrapper
         {
             short** p = (short**)_frame->extended_data;
             return IsPlanar ? p[ch][pos]
-                            : p[0][pos * Channels + ch];
+                            : p[0][pos * _frame->channels + ch];
         }
 
         /// <summary> 
@@ -254,7 +242,7 @@ namespace FFmpegWrapper
             if (IsPlanar) {
                 p[ch][pos] = s;
             } else {
-                p[0][pos * Channels + ch] = s;
+                p[0][pos * _frame->channels + ch] = s;
             }
         }
 
@@ -269,7 +257,7 @@ namespace FFmpegWrapper
             if (IsPlanar) {
                 p[ch][pos] = s;
             } else {
-                p[0][pos * Channels + ch] = s;
+                p[0][pos * _frame->channels + ch] = s;
             }
         }
 
@@ -283,21 +271,6 @@ namespace FFmpegWrapper
         {
             if (a->format != b->format || a->channels != b->channels) {
                 throw new ArgumentException("AVFrame must have the same format as this AudioFrame");
-            }
-        }
-
-        public void Dispose()
-        {
-            if (!_disposed) {
-                if (_ownFrame) { fixed (AVFrame** ppFrame = &_frame) ffmpeg.av_frame_free(ppFrame); }
-                _disposed = true;
-            }
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (_disposed) {
-                throw new ObjectDisposedException(nameof(AudioFrame));
             }
         }
     }

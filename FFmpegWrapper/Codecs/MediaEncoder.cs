@@ -46,16 +46,16 @@ namespace FFmpegWrapper.Codec
 
         public LavResult ReceivePacket(MediaPacket packet)
         {
-            AVPacket* pkt = stackalloc AVPacket[1];
+            var pkt = new AVPacket();
 
             try {
-                var result = ReceivePacket(pkt);
+                var result = ReceivePacket(&pkt);
                 if (result.IsSuccess()) {
-                    packet.SetData(pkt);
+                    packet.SetData(&pkt);
                 }
                 return result;
             } finally {
-                ffmpeg.av_packet_unref(pkt);
+                ffmpeg.av_packet_unref(&pkt);
             }
         }
     }

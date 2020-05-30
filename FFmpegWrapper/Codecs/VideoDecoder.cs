@@ -47,18 +47,5 @@ namespace FFmpegWrapper.Codec
 
             return new Picture(Width, Height, PixelFormat, true);
         }
-
-        public LavResult ReceiveFrame(Picture pic, out long timestamp)
-        {
-            if (pic == null) throw new ArgumentNullException();
-            timestamp = 0;
-
-            var frame = pic.Frame;
-            var result = ReceiveFrame(frame);
-            if (result.IsSuccess()) {
-                timestamp = frame->pts;
-            }
-            return result;
-        }
     }
 }

@@ -79,7 +79,7 @@ namespace FFmpegWrapper
             }
 
             if (count > frame.Capacity) {
-                throw new ArgumentOutOfRangeException(nameof(count), "Cannot exceed the capacity size.");
+                throw new ArgumentOutOfRangeException(nameof(count), "Cannot exceed the fifo capacity.");
             }
             if (frame.SampleFormat != Format || frame.Channels != Channels) {
                 throw new ArgumentException("Incompatible frame format.", nameof(frame));

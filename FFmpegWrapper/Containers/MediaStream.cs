@@ -47,14 +47,13 @@ namespace FFmpegWrapper.Container
 
             if (Codec == null) {
                 var codecId = Stream->codecpar->codec_id;
-                switch (Type) {
-                    case MediaType.Audio: Codec = new AudioDecoder(codecId); break;
-                    case MediaType.Video: Codec = new VideoDecoder(codecId); break;
-                    default: throw new NotSupportedException($"Stream type {Type} is not supported.");
-                }
-
+                Codec = Type switch
+                {
+                    MediaType.Audio => new AudioDecoder(codecId),
+                    MediaType.Video => new VideoDecoder(codecId),
+                    _ => throw new NotSupportedException($"Stream type {Type} is not supported."),
+                };
                 ffmpeg.avcodec_parameters_to_context(Codec.Context, Stream->codecpar).CheckError("Could not copy the stream parameters to the decoder.");
-
                 Codec.Open();
             }
 

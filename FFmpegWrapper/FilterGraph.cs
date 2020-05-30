@@ -7,12 +7,10 @@ namespace FFmpegWrapper
     //TODO: impl
     internal unsafe class FilterGraph : IDisposable
     {
-        public static IReadOnlyList<string> AllFilters { get; } = GetFilterNames();
-
         private bool _disposed = false;
         private AVFilterGraph* _graph;
-        public AVFilterContext* _src;
-        public AVFilterContext* _sink;
+        private AVFilterContext* _src;
+        private AVFilterContext* _sink;
 
         public AVFilterContext* BufferSource
         {
@@ -42,6 +40,7 @@ namespace FFmpegWrapper
         }
         public FilterGraph(PictureInfo fmt, AVRational timeBase)
         {
+            //TODO: https://github.com/FFmpeg/FFmpeg/blob/master/doc/examples/filtering_video.c
             _graph = ffmpeg.avfilter_graph_alloc();
 
             var buffersrc = ffmpeg.avfilter_get_by_name("buffersrc");
@@ -65,18 +64,17 @@ namespace FFmpegWrapper
             ffmpeg.av_opt_set_int(_src, key, value, searchFlags).CheckError("Failed to set option value.");
         }
 
-        private static List<string> GetFilterNames()
+        /*private static List<FilterInfo> GetFilters()
         {
-            var list = new List<string>(512);
+            var list = new List<AVFilter>(512);
 
             AVFilter* filter;
             void* ptr = null;
 
             while ((filter = ffmpeg.av_filter_iterate(&ptr)) != null) {
-                list.Add(new string((sbyte*)filter->name));
+                //yield return filter;
             }
-            return list;
-        }
+        }*/
 
         public void Dispose()
         {

@@ -127,7 +127,6 @@ namespace Samples
             int Vs = picture.Strides[2];
 
             for (int y = 0; y < height; y++) {
-
                 for (int x = 0; x < width; x++) {
                     Y[x + y * Ys] = (byte)(x + y + no * 3);
                     U[(x / 2) + (y / 2) * Us] = (byte)(128 + y + no * 2);

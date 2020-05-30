@@ -51,12 +51,6 @@ namespace FFmpegWrapper
                                 pOut, dst.Length / DestinationFormat.Channels);
             }
         }
-
-        public int Resample(float* src, int srcCount, float* dst, int dstCount)
-        {
-            return Resample((byte*)src, srcCount, (byte*)dst, dstCount);
-        }
-
         public int Resample(Span<short> src, Span<short> dst)
         {
             CheckBufferSizes(src.Length, dst.Length);
@@ -67,18 +61,27 @@ namespace FFmpegWrapper
         }
 
         /// <summary> Resamples the src samples into the dst buffer. (Interleaved->Interleaved) </summary>
-        /// <param name="srcCount">Number of samples contained by the src parameter.</param>
-        /// <param name="dstCount">Number of samples contained by the dst parameter.</param>
-        /// <returns>The number of samples contained in the dst buffer.</returns>
+        /// <param name="srcCount">Number of samples (per channel) in the src buffer.</param>
+        /// <param name="dstCount">Capacity, in samples (per channel) of the dst buffer.</param>
+        /// <returns>The number of samples written to the dst buffer.</returns>
+        public int Resample(float* src, int srcCount, float* dst, int dstCount)
+        {
+            return Resample((byte*)src, srcCount, (byte*)dst, dstCount);
+        }
+
+        /// <summary> Resamples the src samples into the dst buffer. (Interleaved->Interleaved) </summary>
+        /// <param name="srcCount">Number of samples in the src buffer.</param>
+        /// <param name="dstCount">Capacity, in samples of the dst buffer.</param>
+        /// <returns>The number of samples written to the dst buffer.</returns>
         public int Resample(short* src, int srcCount, short* dst, int dstCount)
         {
             return Resample((byte*)src, srcCount, (byte*)dst, dstCount);
         }
 
         /// <summary> Resamples the src samples into the dst buffer. (Planar->Interleaved) </summary>
-        /// <param name="srcCount">Number of samples contained by the src parameter.</param>
-        /// <param name="dstCount">Number of samples contained by the dst parameter.</param>
-        /// <returns>The number of samples contained in the dst buffer.</returns>
+        /// <param name="srcCount">Number of samples (per channel) in the src buffer.</param>
+        /// <param name="dstCount">Capacity, in samples (per channel) of the dst buffer.</param>
+        /// <returns>The number of samples written to the dst buffer.</returns>
         public int Resample(byte** src, int srcCount, byte* dst, int dstCount)
         {
             byte** p = stackalloc byte*[1] { dst };
@@ -88,9 +91,9 @@ namespace FFmpegWrapper
         }
 
         /// <summary> Resamples the src samples into the dst buffer. (Interleaved->Planar) </summary>
-        /// <param name="srcCount">Number of samples contained by the src parameter.</param>
-        /// <param name="dstCount">Number of samples contained by the dst parameter.</param>
-        /// <returns>The number of samples contained in the dst buffer.</returns>
+        /// <param name="srcCount">Number of samples (per channel) in the src buffer.</param>
+        /// <param name="dstCount">Capacity, in samples (per channel) of the dst buffer.</param>
+        /// <returns>The number of samples written to the dst buffer.</returns>
         public int Resample(byte* src, int srcCount, byte** dst, int dstCount)
         {
             byte** p = stackalloc byte*[1] { src };
@@ -100,9 +103,9 @@ namespace FFmpegWrapper
         }
 
         /// <summary> Resamples the src samples into the dst buffer. (Interleaved->Interleaved) </summary>
-        /// <param name="srcCount">Number of samples contained by the src parameter.</param>
-        /// <param name="dstCount">Number of samples contained by the dst parameter.</param>
-        /// <returns>The number of samples contained in the dst buffer.</returns>
+        /// <param name="srcCount">Number of samples (per channel) in the src buffer.</param>
+        /// <param name="dstCount">Capacity, in samples (per channel) of the dst buffer.</param>
+        /// <returns>The number of samples written to the dst buffer.</returns>
         public int Resample(byte* src, int srcCount, byte* dst, int dstCount)
         {
             byte** p = stackalloc byte*[2] { src, dst };
@@ -111,17 +114,14 @@ namespace FFmpegWrapper
                             p + 1, dstCount);
         }
 
-        public int Resample(AudioFrame src, AudioFrame dst)
-        {
-            return ffmpeg.swr_convert(Context, dst.Planes, dst.Capacity, src.Planes, src.Count).CheckError();
-        }
-
-        //Call to swr_convert
         public int Resample(byte** src, int srcCount, byte** dst, int dstCount)
         {
             return ffmpeg.swr_convert(Context, dst, dstCount, src, srcCount).CheckError();
         }
-
+        public int Resample(AudioFrame src, AudioFrame dst)
+        {
+            return ffmpeg.swr_convert(Context, dst.Planes, dst.Capacity, src.Planes, src.Count).CheckError();
+        }
         public int Resample(AVFrame* src, AVFrame* dst)
         {
             return ffmpeg.swr_convert_frame(Context, dst, src).CheckError();

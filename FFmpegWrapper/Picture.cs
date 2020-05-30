@@ -5,17 +5,8 @@ using FFmpegWrapper.Codec;
 
 namespace FFmpegWrapper
 {
-    public unsafe partial class Picture : IDisposable
+    public unsafe partial class Picture : MediaFrame
     {
-        private AVFrame* _frame;
-        public AVFrame* Frame
-        {
-            get {
-                ThrowIfDisposed();
-                return _frame;
-            }
-        }
-
         public int Width { get; }
         public int Height { get; }
         public AVPixelFormat Format { get; }
@@ -30,33 +21,34 @@ namespace FFmpegWrapper
         /// <summary> Line size for each plane. (4 elements) </summary>
         public int* Strides => (int*)&Frame->linesize;
 
-        private bool _ownFrame = true;
-        private bool _disposed = false;
-
         public Picture(PictureInfo fmt)
             : this(fmt.Width, fmt.Height, fmt.PixelFormat)
         {
         }
-        public Picture(int w, int h, AVPixelFormat fmt = AVPixelFormat.AV_PIX_FMT_RGBA, bool clearToBlack = false)
+        public Picture(int width, int height, AVPixelFormat fmt = AVPixelFormat.AV_PIX_FMT_RGBA, bool clearToBlack = false)
         {
-            if (w <= 0 || h <= 0) {
+            if (width <= 0 || height <= 0) {
                 throw new ArgumentException("Invalid frame resolution.");
             }
             _frame = ffmpeg.av_frame_alloc();
             _frame->format = (int)fmt;
-            _frame->width = w;
-            _frame->height = h;
+            _frame->width = width;
+            _frame->height = height;
 
             ffmpeg.av_frame_get_buffer(_frame, 0).CheckError("Failed to allocate frame.");
 
-            Width = w;
-            Height = h;
+            Width = width;
+            Height = height;
             Format = fmt;
 
             if (clearToBlack) {
                 Clear();
             }
         }
+        /// <summary>
+        /// Creates an new Picture instance with an already allocated frame.
+        /// </summary>
+        /// <param name="freeOnDispose">If true, the frame will be freed with av_frame_free() when you call Dispose().</param>
         public Picture(AVFrame* frame, bool clearToBlack = false, bool freeOnDispose = false)
         {
             if (frame->width <= 0 || frame->height <= 0 || frame->extended_data == null) {
@@ -108,12 +100,14 @@ namespace FFmpegWrapper
                                    Math.Min(Width, frame->width), Math.Min(Height, frame->height));
         }
 
-        public void Save(string path, int quality = 90, int dstW = 0, int dstH = 0)
+        /// <summary> Saves this picture to the specified file. The format will be choosen based on the file extension. (Can be either JPG or PNG) </summary>
+        /// <param name="quality">JPEG: Quantization factor. PNG: ZLib compression level. 0-100</param>
+        public void Save(string filename, int quality = 90, int dstW = 0, int dstH = 0)
         {
             ThrowIfDisposed();
 
-            bool jpeg = path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                        path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
+            bool jpeg = filename.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                        filename.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
 
             var codec = jpeg ? AVCodecID.AV_CODEC_ID_MJPEG : AVCodecID.AV_CODEC_ID_PNG;
             var pixFmt = jpeg ? AVPixelFormat.AV_PIX_FMT_YUVJ444P : AVPixelFormat.AV_PIX_FMT_RGBA;
@@ -121,43 +115,29 @@ namespace FFmpegWrapper
             if (dstW <= 0) dstW = Width;
             if (dstH <= 0) dstH = Height;
 
-            using (var tmp = new Picture(dstW, dstH, pixFmt))
-            using (var enc = new VideoEncoder(codec, dstW, dstH, tmp.Format, 1, 10000))
-            using (var sws = new SwScaler(Info, tmp.Info)) {
-                var ctx = enc.Context;
-                if (jpeg) {
-                    //1-31
-                    int q = 1 + (100 - quality) * 31 / 100;
-                    enc.MaxQuantizer = q;
-                    enc.MinQuantizer = q;
-                } else {
-                    //zlib compression (0-9)
-                    enc.CompressionLevel = quality * 9 / 100;
-                }
-                enc.Open();
+            using var tmp = new Picture(dstW, dstH, pixFmt);
+            using var enc = new VideoEncoder(codec, dstW, dstH, tmp.Format, 1, 10000);
+            using var sws = new SwScaler(Info, tmp.Info);
 
-                sws.Scale(this, tmp);
-                enc.SendFrame(tmp, 0);
-
-                var packet = new MediaPacket();
-                enc.ReceivePacket(packet);
-
-                File.WriteAllBytes(path, packet.Data.ToArray());
+            var ctx = enc.Context;
+            if (jpeg) {
+                //1-31
+                int q = 1 + (100 - quality) * 31 / 100;
+                enc.MaxQuantizer = q;
+                enc.MinQuantizer = q;
+            } else {
+                //zlib compression (0-9)
+                enc.CompressionLevel = quality * 9 / 100;
             }
-        }
+            enc.Open();
 
-        public void Dispose()
-        {
-            if (!_disposed) {
-                if (_ownFrame) { fixed (AVFrame** ppFrame = &_frame) ffmpeg.av_frame_free(ppFrame); }
-                _disposed = true;
-            }
-        }
-        private void ThrowIfDisposed()
-        {
-            if (_disposed) {
-                throw new ObjectDisposedException(nameof(Picture));
-            }
+            sws.Scale(this, tmp);
+            enc.SendFrame(tmp, 0);
+
+            var packet = new MediaPacket();
+            enc.ReceivePacket(packet);
+
+            File.WriteAllBytes(filename, packet.Data.ToArray());
         }
     }
 }

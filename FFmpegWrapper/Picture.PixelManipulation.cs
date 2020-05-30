@@ -3,8 +3,13 @@ using System;
 
 namespace FFmpegWrapper
 {
-    public unsafe partial class Picture : IDisposable
+    public unsafe partial class Picture
     {
+        /// <summary>
+        /// Gets the pixel at the specified position. If the position lies outside the picture bounds, this method will return default(Pixel).
+        /// <br></br>
+        /// This method is only meant to debug/testing purposes. If you need performance, use the Planes/Strides properties directly.
+        /// </summary>
         public Pixel GetPixel(int x, int y)
         {
             var frame = Frame;
@@ -45,6 +50,12 @@ namespace FFmpegWrapper
             }
             return default;
         }
+
+        /// <summary>
+        /// Sets the pixel at the specified position. If the position lies outside the picture bounds, this method will do nothing.
+        /// <br></br>
+        /// This method is only meant to debug/testing purposes. If you need performance, use Planes/Strides properties directly. <br></br>
+        /// </summary>
         public void SetPixel(int x, int y, Pixel px)
         {
             var frame = Frame;
@@ -95,16 +106,16 @@ namespace FFmpegWrapper
         {
             int cb = u - 128;
             int cr = v - 128;
-            int r = (int)(y + 1.402 * cr);
-            int g = (int)(y - 0.344 * cb - 0.714 * cr);
-            int b = (int)(y + 1.772 * cb);
+            int r = (y + 91880  * cr) >> 16;
+            int g = (y - 22544  * cb - 46792 * cr) >> 16;
+            int b = (y + 116128 * cb) >> 16;
             return new Pixel(r, g, b, 255);
         }
         private static void Rgb2Yuv(Pixel p, out byte y, out byte u, out byte v)
         {
-            y = (byte)( 0.299 * p.R + 0.587 * p.G + 0.114 * p.B);
-            u = (byte)(-0.169 * p.R - 0.331 * p.G + 0.499 * p.B + 128);
-            v = (byte)( 0.499 * p.R - 0.418 * p.G - 0.081 * p.B + 128);
+            y = (byte)((( 19595 * p.R + 38469 * p.G +  7471 * p.B) >> 16));
+            u = (byte)(((-11075 * p.R - 21692 * p.G + 32702 * p.B) >> 16) + 128);
+            v = (byte)((( 32702 * p.R - 27394 * p.G -  5308 * p.B) >> 16) + 128);
         }
     }
 }

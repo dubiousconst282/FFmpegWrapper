@@ -24,7 +24,7 @@ namespace FFmpegWrapper
         public override string ToString()
         {
             var fmt = PixelFormat.ToString().Substring("AV_PIX_FMT_".Length);
-            return $"Resolution={Width}x{Height} Format={fmt}";
+            return $"Size={Width}x{Height} Format={fmt}";
         }
     }
 }

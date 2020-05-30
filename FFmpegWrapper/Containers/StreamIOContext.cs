@@ -56,16 +56,12 @@ namespace FFmpegWrapper.Container
         }
         protected override unsafe long Seek(void* opaque, long offset, int whence)
         {
-            const int SEEK_SET = 0;
-            const int SEEK_CUR = 1;
-            const int SEEK_END = 2;
-
             SeekOrigin origin;
             switch (whence) {
                 case SEEK_SET: origin = SeekOrigin.Begin; break;
                 case SEEK_CUR: origin = SeekOrigin.Current; break;
                 case SEEK_END: origin = SeekOrigin.End; break;
-                case ffmpeg.AVSEEK_SIZE: return BaseStream.Length;
+                case AVSEEK_SIZE: return BaseStream.Length;
                 default: return -22; //EINVAL
             }
             return BaseStream.Seek(offset, origin);

@@ -58,10 +58,10 @@ namespace FFmpegWrapper
             var dstFmt = DestinationFormat;
 
             if (src != srcFmt.PixelFormat || srcW != srcFmt.Width || srcH != srcFmt.Height) {
-                throw new ArgumentException("Resolution and pixel format must be the same as SourceFormat", "src");
+                throw new ArgumentException("Resolution and pixel format must match SourceFormat", "src");
             }
             if (dst != dstFmt.PixelFormat || dstW != dstFmt.Width || dstH != dstFmt.Height) {
-                throw new ArgumentException("Resolution and pixel format must be the same as DestinationFormat", "dst");
+                throw new ArgumentException("Resolution and pixel format must match DestinationFormat", "dst");
             }
         }
 
@@ -81,14 +81,14 @@ namespace FFmpegWrapper
     }
     public enum InterpolationMode
     {
-        FastBilinear = ffmpeg.SWS_FAST_BILINEAR,
-        Bilinear = ffmpeg.SWS_BILINEAR,
-        Bicubic = ffmpeg.SWS_BICUBIC,
+        FastBilinear    = ffmpeg.SWS_FAST_BILINEAR,
+        Bilinear        = ffmpeg.SWS_BILINEAR,
+        Bicubic         = ffmpeg.SWS_BICUBIC,
         NearestNeighbor = ffmpeg.SWS_POINT,
-        Box = ffmpeg.SWS_AREA,
-        Gaussian = ffmpeg.SWS_GAUSS,
-        Sinc = ffmpeg.SWS_SINC,
-        Lanczos = ffmpeg.SWS_LANCZOS,
-        Spline = ffmpeg.SWS_SPLINE
+        Box             = ffmpeg.SWS_AREA,
+        Gaussian        = ffmpeg.SWS_GAUSS,
+        Sinc            = ffmpeg.SWS_SINC,
+        Lanczos         = ffmpeg.SWS_LANCZOS,
+        Spline          = ffmpeg.SWS_SPLINE
     }
 }
