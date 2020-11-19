@@ -8,7 +8,7 @@ namespace FFmpegWrapper
         /// <summary>
         /// Gets the pixel at the specified position. If the position lies outside the picture bounds, this method will return default(Pixel).
         /// <br></br>
-        /// This method is only meant to debug/testing purposes. If you need performance, use the Planes/Strides properties directly.
+        /// This method is only meant to debug/testing purposes. If you care about performance, use the Planes/Strides properties directly.
         /// </summary>
         public Pixel GetPixel(int x, int y)
         {
@@ -54,7 +54,7 @@ namespace FFmpegWrapper
         /// <summary>
         /// Sets the pixel at the specified position. If the position lies outside the picture bounds, this method will do nothing.
         /// <br></br>
-        /// This method is only meant to debug/testing purposes. If you need performance, use Planes/Strides properties directly. <br></br>
+        /// This method is only meant to debug/testing purposes. If you care about performance, use Planes/Strides properties directly. <br></br>
         /// </summary>
         public void SetPixel(int x, int y, Pixel px)
         {

@@ -39,6 +39,7 @@ namespace FFmpegWrapper
                 if (_ownFrame) { fixed (AVFrame** ppFrame = &_frame) ffmpeg.av_frame_free(ppFrame); }
                 _disposed = true;
             }
+            GC.SuppressFinalize(this);
         }
         protected void ThrowIfDisposed()
         {

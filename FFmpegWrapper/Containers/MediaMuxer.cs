@@ -71,8 +71,8 @@ namespace FFmpegWrapper.Container
             }
             stream->id = (int)_ctx->nb_streams - 1;
             stream->time_base = encoder.TimeBase;
-            stream->codec->time_base = encoder.TimeBase;
-            stream->codec->framerate = encoder.FrameRate;
+            //stream->codec->time_base = encoder.TimeBase;
+            //stream->codec->framerate = encoder.FrameRate;
 
             //Some formats want stream headers to be separate.
             if ((_ctx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0) {
@@ -84,8 +84,18 @@ namespace FFmpegWrapper.Container
             return st;
         }
 
-        /// <summary> Opens all streams and write the container header. </summary>
+        /// <summary> Opens all streams and writes the container header. </summary>
         public void Open()
+        {
+            Open(null);
+        }
+
+        /// <summary> Opens all streams and writes the container header. </summary>
+        /// <param name="options">
+        /// Options passed to <see cref="ffmpeg.avformat_write_header(AVFormatContext*, AVDictionary**)"/>. 
+        /// When this method returns, the value of this parameter will be destroyed and replaced with a dict containing options that were not found.
+        /// </param>
+        public void Open(AVDictionary** options)
         {
             ThrowIfDisposed();
             if (IsOpen) {
@@ -104,8 +114,8 @@ namespace FFmpegWrapper.Container
                 ffmpeg.avio_open(&_ctx->pb, Filename, ffmpeg.AVIO_FLAG_WRITE).CheckError("Could not open output file");
             }
 
-            ffmpeg.avformat_write_header(_ctx, null).CheckError("Could not write header to output file");
-
+            ffmpeg.avformat_write_header(_ctx, options).CheckError("Could not write header to output file");
+            
             IsOpen = true;
         }
 

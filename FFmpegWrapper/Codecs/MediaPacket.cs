@@ -30,9 +30,9 @@ namespace FFmpegWrapper.Codec
             if (pkt->pts == NO_PTS) pts = null;
             if (pkt->dts == NO_PTS) dts = null;
 
-            SetData(pts, dts, pkt->duration, pkt->stream_index, new Span<byte>(pkt->data, pkt->size));
+            SetData(pts, dts, pkt->duration, pkt->stream_index, new ReadOnlySpan<byte>(pkt->data, pkt->size));
         }
-        public void SetData(long? pts, long? dts, long dur, int streamIndex, Span<byte> data)
+        public void SetData(long? pts, long? dts, long dur, int streamIndex, ReadOnlySpan<byte> data)
         {
             IsEmpty = false;
 
