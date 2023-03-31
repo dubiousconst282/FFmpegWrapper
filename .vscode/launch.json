@@ -1,0 +1,46 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch AVEncode",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/AVEncode/bin/Debug/AVEncode.dll",
+            "args": [
+                "av_encode.mp4"
+            ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch ThumbExtractor",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/ThumbExtractor/bin/Debug/ThumbExtractor.dll",
+            "args": [
+                "sample.mp4",
+                "thumbs/",
+                "10"
+            ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch SkiaInterop",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/SkiaInterop/bin/Debug/SkiaInterop.dll",
+            "args": [
+                "skia_output.mp4",
+            ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ]
+}

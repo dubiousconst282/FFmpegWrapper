@@ -1,94 +1,83 @@
-﻿using System;
-using FFmpeg.AutoGen;
+﻿namespace FFmpeg.Wrapper;
 
-namespace FFmpegWrapper
+public unsafe class SwScaler : FFObject
 {
-    public unsafe class SwScaler : IDisposable
-    {
-        private SwsContext* _ctx;
+    private SwsContext* _ctx;
 
-        public SwsContext* Context
-        {
-            get {
-                ThrowIfDisposed();
-                return _ctx;
-            }
-        }
-
-        private bool _disposed = false;
-
-        public PictureInfo SourceFormat { get; }
-        public PictureInfo DestinationFormat { get; }
-
-        public SwScaler(PictureInfo srcFmt, PictureInfo dstFmt, InterpolationMode flags = InterpolationMode.Bicubic)
-        {
-            SourceFormat = srcFmt;
-            DestinationFormat = dstFmt;
-
-            _ctx = ffmpeg.sws_getContext(srcFmt.Width, srcFmt.Height, srcFmt.PixelFormat,
-                                         dstFmt.Width, dstFmt.Height, dstFmt.PixelFormat,
-                                         (int)flags, null, null, null);
-        }
-        public int Scale(Picture src, Picture dst)
-        {
-            CheckFormats(src.Format, src.Width, src.Height,
-                         dst.Format, dst.Width, dst.Height);
-
-            return Scale(src.Planes, src.Strides, dst.Planes, dst.Strides);
-        }
-        public int Scale(AVFrame* src, AVFrame* dst)
-        {
-            CheckFormats((AVPixelFormat)src->format, src->width, src->height,
-                         (AVPixelFormat)dst->format, dst->width, dst->height);
-
-            return Scale((byte**)&src->data, (int*)&src->linesize, (byte**)&dst->data, (int*)&dst->linesize);
-        }
-        public int Scale(byte*[] src, int[] srcStride, byte*[] dst, int[] dstStride)
-        {
-            return ffmpeg.sws_scale(Context, src, srcStride, 0, SourceFormat.Height, dst, dstStride).CheckError("Failed to rescale frame");
-        }
-        public int Scale(byte** src, int* srcStride, byte** dst, int* dstStride)
-        {
-            return ffmpegex.sws_scale(Context, src, srcStride, 0, SourceFormat.Height, dst, dstStride).CheckError("Failed to rescale frame");
-        }
-
-        private void CheckFormats(AVPixelFormat src, int srcW, int srcH, AVPixelFormat dst, int dstW, int dstH)
-        {
-            var srcFmt = SourceFormat;
-            var dstFmt = DestinationFormat;
-
-            if (src != srcFmt.PixelFormat || srcW != srcFmt.Width || srcH != srcFmt.Height) {
-                throw new ArgumentException("Resolution and pixel format must match SourceFormat", "src");
-            }
-            if (dst != dstFmt.PixelFormat || dstW != dstFmt.Width || dstH != dstFmt.Height) {
-                throw new ArgumentException("Resolution and pixel format must match DestinationFormat", "dst");
-            }
-        }
-
-        public void Dispose()
-        {
-            if (!_disposed) {
-                ffmpeg.sws_freeContext(Context);
-                _disposed = true;
-            }
-        }
-        private void ThrowIfDisposed()
-        {
-            if (_disposed) {
-                throw new ObjectDisposedException(nameof(SwScaler));
-            }
+    public SwsContext* Handle {
+        get {
+            ThrowIfDisposed();
+            return _ctx;
         }
     }
-    public enum InterpolationMode
+
+    public PictureFormat InputFormat { get; }
+    public PictureFormat OutputFormat { get; }
+
+    public SwScaler(PictureFormat inFmt, PictureFormat outFmt, InterpolationMode flags = InterpolationMode.Bicubic)
     {
-        FastBilinear    = ffmpeg.SWS_FAST_BILINEAR,
-        Bilinear        = ffmpeg.SWS_BILINEAR,
-        Bicubic         = ffmpeg.SWS_BICUBIC,
-        NearestNeighbor = ffmpeg.SWS_POINT,
-        Box             = ffmpeg.SWS_AREA,
-        Gaussian        = ffmpeg.SWS_GAUSS,
-        Sinc            = ffmpeg.SWS_SINC,
-        Lanczos         = ffmpeg.SWS_LANCZOS,
-        Spline          = ffmpeg.SWS_SPLINE
+        InputFormat = inFmt;
+        OutputFormat = outFmt;
+
+        _ctx = ffmpeg.sws_getContext(inFmt.Width, inFmt.Height, inFmt.PixelFormat,
+                                     outFmt.Width, outFmt.Height, outFmt.PixelFormat,
+                                     (int)flags, null, null, null);
     }
+    public void Convert(VideoFrame src, VideoFrame dst)
+    {
+        Convert(src.Handle, dst.Handle);
+    }
+    public void Convert(AVFrame* src, AVFrame* dst)
+    {
+        var srcFmt = InputFormat;
+        var dstFmt = OutputFormat;
+
+        if ((src->format != (int)srcFmt.PixelFormat || src->width != srcFmt.Width || src->height != srcFmt.Height) ||
+            (dst->format != (int)dstFmt.PixelFormat || dst->width != dstFmt.Width || dst->height != dstFmt.Height)
+        ) {
+            throw new ArgumentException("Frame must match rescaler formats");
+        }
+        ffmpeg.sws_scale(Handle, src->data, src->linesize, 0, InputFormat.Height, dst->data, dst->linesize);
+    }
+    /// <summary> Converts and rescale interleaved pixel data into the destination format.</summary>
+    public void Convert(ReadOnlySpan<byte> src, int stride, VideoFrame dst)
+    {
+        var srcFmt = InputFormat;
+        var dstFmt = OutputFormat;
+
+        if ((srcFmt.IsPlanar || src.Length < srcFmt.Height * stride) ||
+            (dst.PixelFormat != dstFmt.PixelFormat || dst.Width != dstFmt.Width || dst.Height != dstFmt.Height)
+        ) {
+            throw new ArgumentException("Frame must match rescaler formats");
+        }
+        fixed (byte* pSrc = src) {
+            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { stride }, 0, dst.Height, dst.Handle->data, dst.Handle->linesize);
+        }
+    }
+
+    protected override void Free()
+    {
+        if (_ctx != null) {
+            ffmpeg.sws_freeContext(_ctx);
+            _ctx = null;
+        }
+    }
+    private void ThrowIfDisposed()
+    {
+        if (_ctx == null) {
+            throw new ObjectDisposedException(nameof(SwScaler));
+        }
+    }
+}
+public enum InterpolationMode
+{
+    FastBilinear    = ffmpeg.SWS_FAST_BILINEAR,
+    Bilinear        = ffmpeg.SWS_BILINEAR,
+    Bicubic         = ffmpeg.SWS_BICUBIC,
+    NearestNeighbor = ffmpeg.SWS_POINT,
+    Box             = ffmpeg.SWS_AREA,
+    Gaussian        = ffmpeg.SWS_GAUSS,
+    Sinc            = ffmpeg.SWS_SINC,
+    Lanczos         = ffmpeg.SWS_LANCZOS,
+    Spline          = ffmpeg.SWS_SPLINE
 }

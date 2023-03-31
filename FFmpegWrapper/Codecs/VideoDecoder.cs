@@ -1,51 +1,25 @@
-﻿using System;
-using FFmpeg.AutoGen;
+﻿namespace FFmpeg.Wrapper;
 
-namespace FFmpegWrapper.Codec
+public unsafe class VideoDecoder : MediaDecoder
 {
-    public unsafe class VideoDecoder : MediaDecoder
+    public int Width => _ctx->width;
+    public int Height => _ctx->height;
+    public AVPixelFormat PixelFormat => _ctx->pix_fmt;
+
+    public PictureFormat FrameFormat => new(Width, Height, PixelFormat);
+
+    public VideoDecoder(AVCodecContext* ctx)
+        : base(ctx, AVMediaType.AVMEDIA_TYPE_VIDEO) { }
+
+    public VideoDecoder(AVCodecID codec)
+        : base(codec, AVMediaType.AVMEDIA_TYPE_VIDEO) { }
+
+    /// <summary> Allocates a frame suitable for use in <see cref="MediaDecoder.ReceiveFrame(MediaFrame)"/>. </summary>
+    public VideoFrame AllocateFrame()
     {
-        public int Width
-        {
-            get => Context->width;
-            set => SetOrThrowIfOpen(ref Context->width, value);
+        if (Width <= 0 || Height <= 0 || PixelFormat == AVPixelFormat.AV_PIX_FMT_NONE) {
+            throw new InvalidOperationException("Invalid frame dimensions. (Is the decoder open?)");
         }
-        public int Height
-        {
-            get => Context->height;
-            set => SetOrThrowIfOpen(ref Context->height, value);
-        }
-        public AVPixelFormat PixelFormat
-        {
-            get => Context->pix_fmt;
-            set => SetOrThrowIfOpen(ref Context->pix_fmt, value);
-        }
-
-        public PictureInfo Info
-        {
-            get => new PictureInfo(Width, Height, PixelFormat);
-            set {
-                ThrowIfOpen();
-                Context->width = value.Width;
-                Context->height = value.Height;
-                Context->pix_fmt = value.PixelFormat;
-            }
-        }
-
-        public VideoDecoder(AVCodecContext* ctx) : base(ctx, AVMediaType.AVMEDIA_TYPE_VIDEO)
-        {
-        }
-        public VideoDecoder(AVCodecID codec) : base(codec, AVMediaType.AVMEDIA_TYPE_VIDEO)
-        {
-        }
-
-        public Picture AllocateFrame()
-        {
-            if (Width <= 0 || Height <= 0 || PixelFormat == AVPixelFormat.AV_PIX_FMT_NONE) {
-                throw new InvalidOperationException("Invalid picture format. (Is the decoder open?)");
-            }
-
-            return new Picture(Width, Height, PixelFormat, true);
-        }
+        return new VideoFrame(FrameFormat, clearToBlack: true);
     }
 }

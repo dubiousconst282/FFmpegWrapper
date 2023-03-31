@@ -1,57 +1,53 @@
-﻿using System;
-using FFmpeg.AutoGen;
+﻿namespace FFmpeg.Wrapper;
 
-namespace FFmpegWrapper
+public unsafe struct AudioFormat
 {
-    public struct AudioFormat
+    public AVSampleFormat SampleFormat { get; }
+    public int SampleRate { get; }
+    public AVChannelLayout Layout { get; }
+
+    public int NumChannels => Layout.nb_channels;
+
+    public int BytesPerSample => ffmpeg.av_get_bytes_per_sample(SampleFormat);
+    public bool IsPlanar => ffmpeg.av_sample_fmt_is_planar(SampleFormat) != 0;
+
+    public AudioFormat(AVSampleFormat fmt, int sampleRate, int numChannels)
     {
-        public AVSampleFormat SampleFormat { get; }
-        public int SampleRate { get; }
-        public int Channels { get; }
-        public ulong ChannelLayout { get; }
+        SampleFormat = fmt;
+        SampleRate = sampleRate;
 
-        public int BytesPerSample => ffmpeg.av_get_bytes_per_sample(SampleFormat);
-        public bool IsPlanar => ffmpeg.av_sample_fmt_is_planar(SampleFormat) != 0;
+        AVChannelLayout tempLayout;
+        ffmpeg.av_channel_layout_default(&tempLayout, numChannels);
+        Layout = tempLayout;
+    }
+    public AudioFormat(AVSampleFormat fmt, int sampleRate, AVChannelLayout layout)
+    {
+        SampleFormat = fmt;
+        SampleRate = sampleRate;
+        Layout = layout;
+    }
+    public AudioFormat(AVCodecContext* ctx)
+    {
+        if (ctx->codec_type != AVMediaType.AVMEDIA_TYPE_AUDIO) {
+            throw new ArgumentException("Codec context media type is not audio.", nameof(ctx));
+        }
+        SampleFormat = ctx->sample_fmt;
+        SampleRate = ctx->sample_rate;
+        Layout = ctx->ch_layout;
+    }
+    public AudioFormat(AVFrame* frame)
+    {
+        if (frame->ch_layout.nb_channels <= 0 || frame->sample_rate <= 0) {
+            throw new ArgumentException("The frame does not specify a valid audio format.", nameof(frame));
+        }
+        SampleFormat = (AVSampleFormat)frame->format;
+        SampleRate = frame->sample_rate;
+        Layout = frame->ch_layout;
+    }
 
-        public AudioFormat(AVSampleFormat fmt, int rate, int ch)
-        {
-            SampleFormat = fmt;
-            SampleRate = rate;
-            Channels = ch;
-            ChannelLayout = (ulong)ffmpeg.av_get_default_channel_layout(Channels);
-        }
-        public AudioFormat(AVSampleFormat fmt, int rate, int ch, ulong layout)
-        {
-            SampleFormat = fmt;
-            SampleRate = rate;
-            Channels = ch;
-            ChannelLayout = layout;
-        }
-        public unsafe AudioFormat(AVCodecContext* ctx)
-        {
-            if (ctx->codec_type != AVMediaType.AVMEDIA_TYPE_AUDIO) {
-                throw new ArgumentException("Codec context media type is not audio.", nameof(ctx));
-            }
-            SampleFormat = ctx->sample_fmt;
-            SampleRate = ctx->sample_rate;
-            Channels = ctx->channels;
-            ChannelLayout = ctx->channel_layout;
-        }
-        public unsafe AudioFormat(AVFrame* frame)
-        {
-            if (frame->channels <= 0 || frame->sample_rate <= 0) {
-                throw new ArgumentException("The frame does not specify a valid audio format.", nameof(frame));
-            }
-            SampleFormat = (AVSampleFormat)frame->format;
-            SampleRate = frame->sample_rate;
-            Channels = frame->channels;
-            ChannelLayout = frame->channel_layout;
-        }
-
-        public override string ToString()
-        {
-            var fmt = SampleFormat.ToString().Substring("AV_SAMPLE_FMT_".Length);
-            return $"Rate={SampleRate / 1000.0:0.0}KHz Format={fmt} Channels={Channels}";
-        }
+    public override string ToString()
+    {
+        var fmt = SampleFormat.ToString().Substring("AV_SAMPLE_FMT_".Length);
+        return $"{NumChannels}ch {fmt}, {SampleRate / 1000.0:0.0}KHz";
     }
 }

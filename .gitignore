@@ -1,5 +1,5 @@
-.vs
+bin/
+obj/
+.vs/
 
-SdlPlayerPort
-bin
-obj
+logs/

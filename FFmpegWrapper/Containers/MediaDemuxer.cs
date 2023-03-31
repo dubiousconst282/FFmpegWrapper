@@ -1,144 +1,129 @@
-﻿using System;
-using System.Linq;
-using FFmpeg.AutoGen;
-using FFmpegWrapper.Codec;
+﻿using System.Collections.Immutable;
 
-namespace FFmpegWrapper.Container
+namespace FFmpeg.Wrapper;
+
+public unsafe class MediaDemuxer : FFObject
 {
-    public unsafe class MediaDemuxer : IDisposable
+    private AVFormatContext* _ctx;
+
+    public AVFormatContext* Handle {
+        get {
+            ThrowIfDisposed();
+            return _ctx;
+        }
+    }
+
+    public IOContext? IOC { get; }
+    private bool _iocLeaveOpen;
+
+    public TimeSpan Duration => TimeSpan.FromSeconds(_ctx->duration / (double)ffmpeg.AV_TIME_BASE);
+
+    public ImmutableArray<MediaStream> Streams { get; }
+
+    public bool CanSeek => _ctx->pb->seekable != 0;
+
+    /// <summary> Force seeking to any (also non-key) frames. </summary>
+    public bool SeekToAny {
+        get => _ctx->seek2any != 0;
+        set => _ctx->seek2any = value ? 1 : 0;
+    }
+
+    public MediaDemuxer(string filename)
+        : this(filename, null, false) { }
+    public MediaDemuxer(IOContext ioc, bool leaveOpen = false)
+        : this(null, ioc.Handle, leaveOpen)
     {
-        private AVFormatContext* _ctx; //be careful when using directly.
-        private bool _disposed = false;
-        private bool _leaveIoCtxOpen = true;
-
-        public AVFormatContext* Context
-        {
-            get {
-                ThrowIfDisposed();
-                return _ctx;
-            }
+        IOC = ioc;
+        _iocLeaveOpen = leaveOpen;
+    }
+    
+    private MediaDemuxer(string? url, AVIOContext* pb, bool leaveOpen)
+    {
+        _ctx = ffmpeg.avformat_alloc_context();
+        if (_ctx == null) {
+            throw new OutOfMemoryException("Could not allocate demuxer.");
         }
 
-        public string Filename { get; }
-        public IOContext IOContext { get; }
-
-        public TimeSpan Duration => TimeSpan.FromSeconds(Context->duration / (double)ffmpeg.AV_TIME_BASE);
-
-        public MediaStream[] Streams { get; private set; }
-
-        public bool CanSeek => IOContext == null ? true : IOContext.CanSeek;
-
-        /// <summary> Force seeking to any (also non-key) frames. </summary>
-        public bool SeekToAny
-        {
-            get => Context->seek2any != 0;
-            set => Context->seek2any = value ? 1 : 0;
+        _ctx->pb = pb;
+        fixed (AVFormatContext** c = &_ctx) {
+            ffmpeg.avformat_open_input(c, url, null, null).CheckError("Could not open input");
         }
 
-        public MediaDemuxer(IOContext ioCtx, bool leaveOpen = true)
-        {
-            IOContext = ioCtx;
-            _leaveIoCtxOpen = leaveOpen;
-            _ctx = ffmpeg.avformat_alloc_context();
-            if (_ctx == null) {
-                throw new OutOfMemoryException("Could not allocate demuxer.");
-            }
+        ffmpeg.avformat_find_stream_info(_ctx, null).CheckError("Could not find stream information");
 
-            _ctx->pb = ioCtx.Context;
-            fixed (AVFormatContext** c = &_ctx) {
-                ffmpeg.avformat_open_input(c, null, null, null).CheckError("Could not open input");
-            }
-
-            Initialize();
+        var streams = ImmutableArray.CreateBuilder<MediaStream>((int)_ctx->nb_streams);
+        for (int i = 0; i < _ctx->nb_streams; i++) {
+            streams.Add(new MediaStream(_ctx->streams[i]));
         }
-        public MediaDemuxer(string filename)
-        {
-            Filename = filename;
-            _ctx = ffmpeg.avformat_alloc_context();
-            if (_ctx == null) {
-                throw new OutOfMemoryException("Could not allocate demuxer");
-            }
-            fixed (AVFormatContext** c = &_ctx) {
-                ffmpeg.avformat_open_input(c, filename, null, null).CheckError("Could not open input");
-            }
+        Streams = streams.MoveToImmutable();
+    }
 
-            Initialize();
+    /// <summary> Find the "best" stream in the file. The best stream is determined according to various heuristics as the most likely to be what the user expects. </summary>
+    public MediaStream? FindBestStream(AVMediaType type)
+    {
+        int index = ffmpeg.av_find_best_stream(_ctx, type, -1, -1, null, 0);
+        return index < 0 ? null : Streams[index];
+    }
+
+    public MediaDecoder CreateStreamDecoder(MediaStream stream, bool open = true)
+    {
+        if (Streams[stream.Index] != stream) {
+            throw new ArgumentException("Specified stream is not owned by the demuxer.");
         }
 
-        private void Initialize()
-        {
-            try {
-                ffmpeg.avformat_find_stream_info(_ctx, null).CheckError("Could not find stream information");
-                Streams = new MediaStream[_ctx->nb_streams];
-                for (int i = 0; i < Streams.Length; i++) {
-                    Streams[i] = new MediaStream(_ctx->streams[i], MediaStreamMode.Decode);
-                }
-            } catch {
-                fixed (AVFormatContext** c = &_ctx) ffmpeg.avformat_close_input(c);
-                throw;
-            }
+        var codecId = stream.Handle->codecpar->codec_id;
+        var decoder = stream.Type switch {
+            MediaTypes.Audio => new AudioDecoder(codecId) as MediaDecoder,
+            MediaTypes.Video => new VideoDecoder(codecId),
+            _ => throw new NotSupportedException($"Stream type {stream.Type} is not supported."),
+        };
+        ffmpeg.avcodec_parameters_to_context(decoder.Handle, stream.Handle->codecpar).CheckError("Could not copy stream parameters to the decoder.");
+
+        if (open) decoder.Open();
+
+        return decoder;
+    }
+
+    /// <inheritdoc cref="ffmpeg.av_read_frame(AVFormatContext*, AVPacket*)"/>
+    public bool Read(MediaPacket packet)
+    {
+        ThrowIfDisposed();
+        int result = ffmpeg.av_read_frame(_ctx, packet.Handle);
+
+        if (result != 0 && result != ffmpeg.AVERROR_EOF) {
+            result.ThrowError("Failed to read packet");
         }
+        return result == 0;
+    }
 
-        /// <summary> Returns the first stream of the specified type, or null if not found. </summary>
-        public MediaStream FindStream(MediaType type)
-        {
-            return Streams.FirstOrDefault(s => s.Type == type);
+    /// <summary> Seeks the demuxer to the specified timestamp. </summary>
+    /// <remarks> Once this method returns, all open stream decoders should be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
+    /// <exception cref="InvalidOperationException">If the underlying IO context doesn't support seeking.</exception>
+    public void Seek(TimeSpan timestamp)
+    {
+        ThrowIfDisposed();
+
+        if (!CanSeek) {
+            throw new InvalidOperationException("Backing IO context is not seekable.");
         }
+        var timebase = Streams[0].TimeBase;
+        long ts = (long)Math.Round(timestamp.TotalSeconds * timebase.den / timebase.num);
+        ffmpeg.avformat_seek_file(_ctx, 0, 0, ts, ts, ffmpeg.AVSEEK_FLAG_FRAME).CheckError("Seek failed.");
+    }
 
-        public LavResult Read(AVPacket* packet)
-        {
-            return (LavResult)ffmpeg.av_read_frame(Context, packet);
+    protected override void Free()
+    {
+        if (_ctx != null) {
+            fixed (AVFormatContext** c = &_ctx) ffmpeg.avformat_close_input(c);
         }
-        public LavResult Read(MediaPacket packet)
-        {
-            var pkt = new AVPacket();
-            try {
-                LavResult result = Read(&pkt);
-
-                if (result.IsSuccess()) {
-                    packet.SetData(&pkt);
-                }
-
-                return result;
-            } finally {
-                ffmpeg.av_packet_unref(&pkt);
-            }
+        if (!_iocLeaveOpen) {
+            IOC?.Dispose();
         }
-
-        public void Seek(TimeSpan timestamp)
-        {
-            if (!CanSeek) {
-                throw new InvalidOperationException("Backing IO context is not seekable.");
-            }
-
-            AVRational timebase = Streams[0].Stream->time_base;
-
-            long frame = (long)Math.Round(timestamp.TotalSeconds * timebase.den / timebase.num);
-
-            ffmpeg.avformat_seek_file(Context, 0, 0, frame, frame, ffmpeg.AVSEEK_FLAG_FRAME).CheckError("Seek failed.");
-
-            for (int i = 0; i < Streams.Length; i++) {
-                Streams[i].Codec?.Flush();
-            }
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (_disposed) {
-                throw new ObjectDisposedException(nameof(MediaDemuxer));
-            }
-        }
-
-        public void Dispose()
-        {
-            if (!_disposed) {
-                fixed (AVFormatContext** c = &_ctx) ffmpeg.avformat_close_input(c);
-
-                if (IOContext != null && !_leaveIoCtxOpen) {
-                    IOContext.Dispose();
-                }
-                _disposed = true;
-            }
+    }
+    private void ThrowIfDisposed()
+    {
+        if (_ctx == null) {
+            throw new ObjectDisposedException(nameof(MediaDemuxer));
         }
     }
 }

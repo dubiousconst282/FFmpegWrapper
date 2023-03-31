@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project>
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -8,9 +8,11 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <InvariantGlobalization>true</InvariantGlobalization>
+    
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-
+  
   <ItemGroup>
-    <PackageReference Include="FFmpeg.AutoGen" Version="6.0.0" />
+    <ProjectReference Include="../../FFmpegWrapper/FFmpegWrapper.csproj" />
   </ItemGroup>
 </Project>

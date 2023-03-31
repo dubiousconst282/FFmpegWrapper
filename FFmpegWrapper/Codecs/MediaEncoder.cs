@@ -1,62 +1,36 @@
-﻿using System;
-using FFmpeg.AutoGen;
+﻿namespace FFmpeg.Wrapper;
 
-namespace FFmpegWrapper.Codec
+public abstract unsafe class MediaEncoder : CodecBase
 {
-    public abstract unsafe class MediaEncoder : CodecBase
+    public int BitRate {
+        get => (int)_ctx->bit_rate;
+        set => SetOrThrowIfOpen(ref _ctx->bit_rate, value);
+    }
+
+    internal MediaEncoder(AVCodecID codecId, AVMediaType parentType)
+        : base(FindCoder(codecId, parentType, isEncoder: true)) { }
+
+    public void SetOption(string name, string value)
     {
-        public int BitRate
-        {
-            get => (int)Context->bit_rate;
-            set => Context->bit_rate = value;
-        }
+        ffmpeg.av_opt_set(Handle->priv_data, name, value, 0).CheckError();
+    }
 
-        public MediaEncoder(AVCodecID codec, AVMediaType parentType)
-            : base(FindEncoder(codec, parentType))
-        {
-        }
+    public bool ReceivePacket(MediaPacket pkt)
+    {
+        var result = (LavResult)ffmpeg.avcodec_receive_packet(Handle, pkt.Handle);
 
-        private static AVCodec* FindEncoder(AVCodecID codecId, AVMediaType type)
-        {
-            AVCodec* codec = ffmpeg.avcodec_find_encoder(codecId);
-            if (codec == null) {
-                throw new NotSupportedException($"Could not find encoder for codec {codecId.ToString().Substring("AV_CODEC_ID_".Length)}.");
-            }
-            if (codec->type != type) {
-                throw new ArgumentException("Codec is not valid for the media type.");
-            }
-            return codec;
+        if (result is not (LavResult.Success or LavResult.TryAgain or LavResult.EndOfFile)) {
+            result.ThrowIfError("Could not encode packet");
         }
+        return result == 0;
+    }
+    public bool SendFrame(MediaFrame? frame)
+    {
+        var result = (LavResult)ffmpeg.avcodec_send_frame(Handle, frame == null ? null : frame.Handle);
 
-        public void SetOption(string name, string value)
-        {
-            ffmpeg.av_opt_set(Context->priv_data, name, value, 0);
+        if (result != LavResult.Success && !(result == LavResult.EndOfFile && frame == null)) {
+            result.ThrowIfError("Could not encode frame");
         }
-
-        public LavResult SendFrame(AVFrame* frame, bool throwOnError = true)
-        {
-            int ret = ffmpeg.avcodec_send_frame(Context, frame);
-            if (throwOnError) ret.CheckError("Could not encode frame");
-            return (LavResult)ret;
-        }
-        public LavResult ReceivePacket(AVPacket* pkt)
-        {
-            return (LavResult)ffmpeg.avcodec_receive_packet(Context, pkt);
-        }
-
-        public LavResult ReceivePacket(MediaPacket packet)
-        {
-            var pkt = new AVPacket();
-
-            try {
-                var result = ReceivePacket(&pkt);
-                if (result.IsSuccess()) {
-                    packet.SetData(&pkt);
-                }
-                return result;
-            } finally {
-                ffmpeg.av_packet_unref(&pkt);
-            }
-        }
+        return result == 0;
     }
 }

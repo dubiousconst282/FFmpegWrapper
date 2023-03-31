@@ -1,65 +1,33 @@
-﻿using System;
-using FFmpeg.AutoGen;
+﻿namespace FFmpeg.Wrapper;
 
-namespace FFmpegWrapper.Codec
+public abstract unsafe class MediaDecoder : CodecBase
 {
-    public abstract unsafe class MediaDecoder : CodecBase
+    public MediaDecoder(AVCodecID codecId, AVMediaType parentType)
+        : base(FindCoder(codecId, parentType, isEncoder: false)) { }
+
+    public MediaDecoder(AVCodecContext* ctx, AVMediaType parentType) : base(ctx)
     {
-        public MediaDecoder(AVCodecID codec, AVMediaType parentType)
-            : base(FindDecoder(codec, parentType))
-        {
+        if (ctx->codec->type != parentType) {
+            throw new ArgumentException("Specified codec is not valid for the current media type.");
         }
-        public MediaDecoder(AVCodecContext* ctx, AVMediaType parentType) : base(ctx)
-        {
-            if (Codec->type != parentType) {
-                throw new ArgumentException("Codec is not valid for the media type.");
-            }
-        }
+    }
 
-        private static AVCodec* FindDecoder(AVCodecID codecId, AVMediaType type)
-        {
-            AVCodec* codec = ffmpeg.avcodec_find_decoder(codecId);
-            if (codec == null) {
-                throw new NotSupportedException($"Could not find encoder for codec {codecId.ToString().Substring("AV_CODEC_ID_".Length)}.");
-            }
-            if (codec->type != type) {
-                throw new ArgumentException("Codec is not valid for the media type.");
-            }
-            return codec;
-        }
+    public void SendPacket(MediaPacket? pkt)
+    {
+        var result = (LavResult)ffmpeg.avcodec_send_packet(Handle, pkt == null ? null : pkt.Handle);
 
-        public LavResult SendPacket(AVPacket* pkt, bool throwOnError = true)
-        {
-            int ret = ffmpeg.avcodec_send_packet(Context, pkt);
-            if (throwOnError) ret.CheckError("Could not decode packet");
-            return (LavResult)ret;
+        if (result != LavResult.Success && !(result == LavResult.EndOfFile && pkt == null)) {
+            result.ThrowIfError("Could not decode packet (hints: check if the decoder is open, try receiving frames first)");
         }
-        public LavResult SendPacket(MediaPacket pkt, bool throwOnError = true)
-        {
-            var mem = pkt.Data;
-            fixed (byte* pData = mem.Span) {
-                var p = new AVPacket {
-                    size = mem.Length,
-                    data = pData,
+    }
 
-                    pts = pkt.PresentationTimestamp ?? ffmpeg.AV_NOPTS_VALUE,
-                    dts = pkt.DecompressionTimestamp ?? ffmpeg.AV_NOPTS_VALUE,
-                    duration = pkt.Duration
-                };
-                return SendPacket(&p, throwOnError);
-            }
-        }
+    public bool ReceiveFrame(MediaFrame frame)
+    {
+        var result = (LavResult)ffmpeg.avcodec_receive_frame(Handle, frame.Handle);
 
-        public LavResult ReceiveFrame(MediaFrame frame)
-        {
-            if (frame == null) {
-                throw new ArgumentNullException(nameof(frame));
-            }
-            return ReceiveFrame(frame.Frame);
+        if (result is not (LavResult.Success or LavResult.TryAgain or LavResult.EndOfFile)) {
+            result.ThrowIfError("Could not decode frame");
         }
-        public LavResult ReceiveFrame(AVFrame* frame)
-        {
-            return (LavResult)ffmpeg.avcodec_receive_frame(Context, frame);
-        }
+        return result == 0;
     }
 }
