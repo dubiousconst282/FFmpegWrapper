@@ -24,7 +24,7 @@ internal static unsafe class Helpers
         }
         return errno;
     }
-    public static void ThrowError(this int errno, string? msg = null)
+    public static Exception ThrowError(this int errno, string? msg = null)
     {
         msg ??= "Operation failed";
         throw new InvalidOperationException(msg + ": " + ErrorString(errno));

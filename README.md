@@ -9,7 +9,12 @@ This library aims to abstract away most of such code while still exposing pointe
 ## Examples
 See the [samples](./Samples/) directory for full code samples.
 
-### Basic video muxing and encoding
+- [Thumbnail Extractor (video decode, seek)](./Samples/ThumbExtractor/Program.cs)
+- [Encoding procedural audio and video](./Samples/AVEncode/Program.cs)
+- [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
+- [Hardware decoding and toy OpenGL player](./Samples/HWDecode/VideoPlayerWindow.cs)
+
+### Showcase: Basic video encoding
 ```cs
 using var muxer = new MediaMuxer("output.mp4");
 

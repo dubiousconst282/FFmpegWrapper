@@ -1,4 +1,4 @@
-namespace FFmpeg.Wrapper;
+﻿namespace FFmpeg.Wrapper;
 
 public static class PixelFormats
 {
@@ -81,4 +81,20 @@ public static class MediaTypes
         Video = AVMediaType.AVMEDIA_TYPE_VIDEO,
         Audio = AVMediaType.AVMEDIA_TYPE_AUDIO,
         Subtitle = AVMediaType.AVMEDIA_TYPE_SUBTITLE;
+}
+public static class HWDeviceTypes
+{
+    public const AVHWDeviceType
+        None = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE,
+        VDPAU = AVHWDeviceType.AV_HWDEVICE_TYPE_VDPAU,
+        Cuda = AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA,
+        VAAPI = AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI,
+        DXVA2 = AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2,
+        QSV = AVHWDeviceType.AV_HWDEVICE_TYPE_QSV,
+        D3D11VA = AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA,
+        DRM = AVHWDeviceType.AV_HWDEVICE_TYPE_DRM,
+        OpenCL = AVHWDeviceType.AV_HWDEVICE_TYPE_OPENCL,
+        Vulkan = AVHWDeviceType.AV_HWDEVICE_TYPE_VULKAN,
+        VideoToolbox = AVHWDeviceType.AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
+        MediaCodec = AVHWDeviceType.AV_HWDEVICE_TYPE_MEDIACODEC;
 }

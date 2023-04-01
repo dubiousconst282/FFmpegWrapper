@@ -14,12 +14,48 @@ public unsafe class VideoDecoder : MediaDecoder
     public VideoDecoder(AVCodecID codec)
         : base(codec, AVMediaType.AVMEDIA_TYPE_VIDEO) { }
 
-    /// <summary> Allocates a frame suitable for use in <see cref="MediaDecoder.ReceiveFrame(MediaFrame)"/>. </summary>
-    public VideoFrame AllocateFrame()
+    //Used to prevent callback pointer from being GC collected
+    AVCodecContext_get_format? _chooseHwPixelFmt;
+
+    public void SetupHardwareAccelerator(HardwareDevice device, params AVPixelFormat[] preferredPixelFormats)
     {
-        if (Width <= 0 || Height <= 0 || PixelFormat == AVPixelFormat.AV_PIX_FMT_NONE) {
-            throw new InvalidOperationException("Invalid frame dimensions. (Is the decoder open?)");
+        ThrowIfOpen();
+
+        _ctx->hw_device_ctx = ffmpeg.av_buffer_ref(device.Handle);
+        _ctx->get_format = _chooseHwPixelFmt = (ctx, pAvailFmts) => {
+            for (var pFmt = pAvailFmts; *pFmt != PixelFormats.None; pFmt++) {
+                if (Array.IndexOf(preferredPixelFormats, *pFmt) >= 0) {
+                    return *pFmt;
+                }
+            }
+            return PixelFormats.None;
+        };
+    }
+
+    /// <summary> Returns a new list containing all hardware acceleration configurations marked with `AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX`. </summary>
+    public List<HWConfigDesc> GetHardwareConfigs()
+    {
+        var configs = new List<HWConfigDesc>();
+
+        for (int i = 0; ; i++) {
+            var config = ffmpeg.avcodec_get_hw_config(_ctx->codec, i);
+            if (config == null) break;
+            
+            //AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX
+            if ((config->methods & 0x01) == 0) continue;
+
+            configs.Add(new() {
+                DeviceType = config->device_type,
+                PixelFormat = config->pix_fmt,
+            });
         }
-        return new VideoFrame(FrameFormat, clearToBlack: true);
+        return configs;
+    }
+
+
+    public readonly struct HWConfigDesc
+    {
+        public AVPixelFormat PixelFormat { get; init; }
+        public AVHWDeviceType DeviceType { get; init; }
     }
 }

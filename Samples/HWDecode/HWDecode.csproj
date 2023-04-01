@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTK" Version="4.7.7" />
+
+    <Content Include="Resources/**/*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

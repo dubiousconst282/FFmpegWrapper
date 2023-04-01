@@ -1,4 +1,4 @@
-namespace FFmpeg.Wrapper;
+﻿namespace FFmpeg.Wrapper;
 
 public unsafe class VideoFrame : MediaFrame
 {
@@ -14,6 +14,7 @@ public unsafe class VideoFrame : MediaFrame
     /// <summary> Line size for each plane. </summary>
     public int* Strides => (int*)&_frame->linesize;
 
+    public bool IsHardwareFormat => (ffmpeg.av_pix_fmt_desc_get(PixelFormat)->flags & ffmpeg.AV_PIX_FMT_FLAG_HWACCEL) != 0;
 
     /// <summary> Allocates a new empty <see cref="AVFrame"/>. </summary>
     public VideoFrame()
@@ -58,6 +59,18 @@ public unsafe class VideoFrame : MediaFrame
         }
         int stride = Strides[plane];
         return new Span<T>(&Data[plane][y * stride], stride / sizeof(T));
+    }
+
+    public HWFrameMapping Map(HWFrameMapFlags flags)
+    {
+        var mappedFrame = ffmpeg.av_frame_alloc();
+        int result = ffmpeg.av_hwframe_map(mappedFrame, Handle, (int)flags);
+
+        if (result == 0) {
+            return new HWFrameMapping(this, mappedFrame);
+        }
+        ffmpeg.av_frame_free(&mappedFrame);
+        throw result.ThrowError("Failed to create hardware frame mapping");
     }
 
     /// <summary> Fills this picture with black pixels. </summary>
@@ -115,4 +128,79 @@ public unsafe class VideoFrame : MediaFrame
 
         File.WriteAllBytes(filename, packet.Data.ToArray());
     }
+}
+public unsafe class HWFrameMapping : FFObject
+{
+    public VideoFrame SourceFrame { get; }
+    private AVFrame* _mapping;
+
+    public AVFrame* MappedFrame {
+        get {
+            ThrowIfDisposed();
+            return _mapping;
+        }
+    }
+
+    public AVPixelFormat PixelFormat => (AVPixelFormat)_mapping->format;
+
+    public byte** Data => (byte**)&_mapping->data;
+    public int* Strides => (int*)&_mapping->linesize;
+
+    internal HWFrameMapping(VideoFrame srcFrame, AVFrame* mappedFrame)
+    {
+        SourceFrame = srcFrame;
+        _mapping = mappedFrame;
+    }
+
+    public Span<T> GetPlaneSpan<T>(int plane) where T : unmanaged
+    {
+        //TODO: factor-in chroma height scale
+        if ((uint)plane >= 4) {
+            throw new ArgumentOutOfRangeException();
+        }
+        int stride = _mapping->linesize[(uint)plane];
+        ulong_array4 planeSizes = new();
+        long_array4 linesizes = new();
+
+        for (uint i = 0; i < 4; i++) {
+            linesizes[i] = _mapping->linesize[i];
+        }
+        ffmpeg.av_image_fill_plane_sizes(ref planeSizes, PixelFormat, SourceFrame.Height, in linesizes);
+        return new Span<T>(Data[plane], (int)(planeSizes[(uint)plane] / (uint)sizeof(T)));
+    }
+
+    protected override void Free()
+    {
+        if (_mapping != null) {
+            fixed (AVFrame** ppMapping = &_mapping) {
+                ffmpeg.av_frame_free(ppMapping);
+            }
+        }
+    }
+    private void ThrowIfDisposed()
+    {
+        if (_mapping == null) {
+            throw new ObjectDisposedException(nameof(HWFrameMapping));
+        }
+    }
+}
+/// <summary> Flags to apply to hardware frame memory mappings. </summary>
+public enum HWFrameMapFlags
+{
+    /// <summary> The mapping must be readable. </summary>
+    Read = 1 << 0,
+    /// <summary> The mapping must be writeable. </summary>
+    Write = 1 << 1,
+    /// <summary>
+    /// The mapped frame will be overwritten completely in subsequent
+    /// operations, so the current frame data need not be loaded.  Any values
+    /// which are not overwritten are unspecified.
+    /// </summary>
+    Overwrite = 1 << 2,
+    /// <summary>
+    /// The mapping must be direct.  That is, there must not be any copying in
+    /// the map or unmap steps.  Note that performance of direct mappings may
+    /// be much lower than normal memory.
+    /// </summary>
+    Direct = 1 << 3,
 }
