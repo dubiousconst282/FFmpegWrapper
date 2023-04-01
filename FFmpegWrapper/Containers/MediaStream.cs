@@ -20,6 +20,8 @@ public unsafe class MediaStream
     /// <summary> Decoding: duration of the stream, in stream time base. If a source file does not specify a duration, but does specify a bitrate, this value will be estimated from bitrate and file size. </summary>
     public TimeSpan Duration => TimeSpan.FromSeconds(Handle->duration * TimeScale);
 
+    public double AvgFrameRate => ffmpeg.av_q2d(Handle->avg_frame_rate);
+
     public MediaStream(AVStream* stream)
     {
         Handle = stream;

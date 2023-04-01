@@ -13,7 +13,7 @@ public class VertexFormat : GLObject
         Stride = stride;
     }
 
-    public static unsafe VertexFormat FromStruct<T>(Shader shader) where T : unmanaged
+    public static unsafe VertexFormat FromStruct<T>(ShaderProgram shader) where T : unmanaged
     {
         var vao = new VertexFormat(sizeof(T));
         var fields = typeof(T).GetFields()
