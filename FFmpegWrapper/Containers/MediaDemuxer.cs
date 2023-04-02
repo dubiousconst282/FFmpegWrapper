@@ -22,12 +22,6 @@ public unsafe class MediaDemuxer : FFObject
 
     public bool CanSeek => _ctx->pb->seekable != 0;
 
-    /// <summary> Force seeking to any (also non-key) frames. </summary>
-    public bool SeekToAny {
-        get => _ctx->seek2any != 0;
-        set => _ctx->seek2any = value ? 1 : 0;
-    }
-
     public MediaDemuxer(string filename)
         : this(filename, null, false) { }
     public MediaDemuxer(IOContext ioc, bool leaveOpen = false)
@@ -96,19 +90,18 @@ public unsafe class MediaDemuxer : FFObject
         return result == 0;
     }
 
-    /// <summary> Seeks the demuxer to the specified timestamp. </summary>
-    /// <remarks> Once this method returns, all open stream decoders should be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
-    /// <exception cref="InvalidOperationException">If the underlying IO context doesn't support seeking.</exception>
-    public void Seek(TimeSpan timestamp)
+    /// <summary> Seeks the demuxer to some keyframe near but not later than <paramref name="timestamp"/>. </summary>
+    /// <remarks> If this method returns true, all open stream decoders should be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
+    /// <exception cref="InvalidOperationException">If the underlying IO context doesn't support seeks.</exception>
+    public bool Seek(TimeSpan timestamp)
     {
         ThrowIfDisposed();
 
         if (!CanSeek) {
             throw new InvalidOperationException("Backing IO context is not seekable.");
         }
-        var timebase = Streams[0].TimeBase;
-        long ts = (long)Math.Round(timestamp.TotalSeconds * timebase.den / timebase.num);
-        ffmpeg.avformat_seek_file(_ctx, 0, 0, ts, ts, ffmpeg.AVSEEK_FLAG_FRAME).CheckError("Seek failed.");
+        long ts = (long)Math.Max(timestamp.TotalSeconds * ffmpeg.AV_TIME_BASE, 0);
+        return ffmpeg.av_seek_frame(_ctx, -1, ts, ffmpeg.AVSEEK_FLAG_BACKWARD) == 0;
     }
 
     protected override void Free()

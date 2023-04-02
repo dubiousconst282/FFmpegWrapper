@@ -25,6 +25,7 @@ public unsafe class VideoPlayerWindow : GameWindow
     private BufferObject _emptyVbo = null!;
 
     private double _avgDecodeTime;
+    private TimeSpan _timestamp;
 
     public VideoPlayerWindow(string videoPath)
         : base(
@@ -46,7 +47,6 @@ public unsafe class VideoPlayerWindow : GameWindow
                 HWDeviceTypes.VAAPI => 100,
                 //HWDeviceTypes.D3D11VA   => 100,   no map() support as of 6.0
                 HWDeviceTypes.DXVA2 => 90,
-                HWDeviceTypes.None => 0,
                 _ => -1,  //Ignore unknown accelerators for now
             });
 
@@ -102,7 +102,7 @@ public unsafe class VideoPlayerWindow : GameWindow
         var decodeTime = Stopwatch.GetElapsedTime(startTime);
 
         _avgDecodeTime = _avgDecodeTime * 0.98 + decodeTime.TotalMilliseconds * 0.02;
-        Title = $"DecodeTime: {_avgDecodeTime:0.00}ms (~{1000 / _avgDecodeTime:0} FPS)";
+        Title = $"Playing {_timestamp:mm\\:ss\\.ff} - DecodeTime: {_avgDecodeTime:0.00}ms (~{1000 / _avgDecodeTime:0} FPS)";
 
         //Render
         _textureY.BindUnit(0);
@@ -134,6 +134,7 @@ public unsafe class VideoPlayerWindow : GameWindow
         while (true) {
             //Check if there's a decoded frame available before reading more packets.
             if (_decoder.ReceiveFrame(_frame)) {
+                _timestamp = TimeSpan.FromSeconds(_frame.PresentationTimestamp!.Value * _stream.TimeScale);
                 UploadFrame();
                 return true;
             }
@@ -173,8 +174,19 @@ public unsafe class VideoPlayerWindow : GameWindow
     {
         base.OnUpdateFrame(e);
 
-        if (KeyboardState.IsKeyDown(Keys.Escape)) {
-            Close();
+        if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
+        
+        if (KeyboardState.IsKeyDown(Keys.Left)) SeekRelative(-5);
+        if (KeyboardState.IsKeyDown(Keys.Right)) SeekRelative(+5);
+    }
+
+    private void SeekRelative(int secs)
+    {
+        Console.WriteLine("Seek to " + (_timestamp + TimeSpan.FromSeconds(secs)));
+        //Note that Seek() will go to some keyframe before the requested timestamp.
+        //If more precision is needed, frames should be decoded and discarded until the desired timestamp.
+        if (_demuxer.Seek(_timestamp + TimeSpan.FromSeconds(secs))) {
+            _decoder.Flush();
         }
     }
 
