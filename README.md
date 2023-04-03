@@ -1,5 +1,5 @@
 # FFmpegWrapper
-Object-oriented FFmpeg API wrappers (powered by `FFmpeg.AutoGen`).
+Object-oriented FFmpeg API wrappers (powered by [FFmpeg.AutoGen](https://github.com/Ruslan-B/FFmpeg.AutoGen)).
 
 ![GitHub](https://img.shields.io/github/license/dubiousconst282/FFmpegWrapper)
 [![Nuget](https://img.shields.io/nuget/v/FFmpeg.ApiWrapper)](https://www.nuget.org/packages/FFmpeg.ApiWrapper)
