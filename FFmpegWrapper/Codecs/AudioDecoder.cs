@@ -9,8 +9,12 @@ public unsafe class AudioDecoder : MediaDecoder
 
     public AudioFormat Format => new(_ctx);
     
-    public AudioDecoder(AVCodecID codec)
-        : base(codec, AVMediaType.AVMEDIA_TYPE_AUDIO) { }
-    public AudioDecoder(AVCodecContext* ctx)
-        : base(ctx, AVMediaType.AVMEDIA_TYPE_AUDIO) { }
+    public AudioDecoder(AVCodecID codecId)
+        : this(FindCodecFromId(codecId, enc: false)) { }
+
+    public AudioDecoder(AVCodec* codec)
+        : this(AllocContext(codec)) { }
+
+    public AudioDecoder(AVCodecContext* ctx, bool takeOwnership = true)
+        : base(ctx, MediaTypes.Audio, takeOwnership) { }
 }

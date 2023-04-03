@@ -41,7 +41,9 @@ public class ShaderProgram : GLObject
 
     public void SetUniform(string name, int value) => GL.ProgramUniform1(Id, GetUniformLocation(name), value);
     public void SetUniform(string name, float value) => GL.ProgramUniform1(Id, GetUniformLocation(name), value);
-    public void SetUniform(string name, in Vector3 value) => GL.ProgramUniform3(Id, GetUniformLocation(name), value.X, value.Y, value.Z);
+    public void SetUniform(string name, in Vector2 value) => GL.ProgramUniform2(Id, GetUniformLocation(name), 1, ref Unsafe.AsRef(in value.X));
+    public void SetUniform(string name, in Vector3 value) => GL.ProgramUniform3(Id, GetUniformLocation(name), 1, ref Unsafe.AsRef(in value.X));
+    public void SetUniform(string name, in Vector4 value) => GL.ProgramUniform4(Id, GetUniformLocation(name), 1, ref Unsafe.AsRef(in value.X));
     public void SetUniform(string name, in Matrix4x4 value, bool transpose = false) => GL.ProgramUniformMatrix4(Id, GetUniformLocation(name), 1, transpose, ref Unsafe.AsRef(in value.M11));
     public void SetUniform(string name, in OpenTK.Mathematics.Matrix3 value, bool transpose = false) => GL.ProgramUniformMatrix3(Id, GetUniformLocation(name), 1, transpose, ref Unsafe.AsRef(in value.Row0.X));
 

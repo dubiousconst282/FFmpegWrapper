@@ -1,6 +1,5 @@
 using SkiaSharp;
 
-using FFmpeg.AutoGen;
 using FFmpeg.Wrapper;
 
 if (args.Length < 1) {
@@ -55,7 +54,7 @@ for (int i = 0; i < numFrames; i++) {
     canvas.Flush();
     scaler.Convert(bitmap.GetPixelSpan(), bitmap.RowBytes, frame);
 
-    frame.PresentationTimestamp = ffmpeg.av_rescale_q(i, ffmpeg.av_inv_q(encoder.FrameRate), encoder.TimeBase);
+    frame.PresentationTimestamp = encoder.GetFramePts(frameNumber: i);
     muxer.EncodeAndWrite(stream, encoder, frame);
 }
 //Flush delayed frames in the encoder

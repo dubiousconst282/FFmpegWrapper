@@ -14,7 +14,8 @@ public unsafe abstract class CodecBase : FFObject
     }
     public bool IsOpen { get; private set; } = false;
 
-    public string CodecName => new string((sbyte*)_ctx->codec->long_name);
+    public string CodecName => new string((sbyte*)_ctx->codec->name);
+    public string CodecLongName => new string((sbyte*)_ctx->codec->long_name);
 
     public AVRational TimeBase {
         get => _ctx->time_base;
@@ -37,38 +38,40 @@ public unsafe abstract class CodecBase : FFObject
 
     public AVMediaType CodecType => _ctx->codec_type;
 
-    internal CodecBase(AVCodec* codec)
+    internal CodecBase(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
     {
-        _ctx = ffmpeg.avcodec_alloc_context3(codec);
-        _ownsContext = true;
-
-        if (_ctx == null) {
-            throw new OutOfMemoryException("Failed to allocate codec context.");
+        if (ctx->codec->type != expectedType) {
+            if (takeOwnership) ffmpeg.avcodec_free_context(&ctx);
+            
+            throw new ArgumentException("Specified codec is not valid for the current media type.");
         }
-    }
-    internal CodecBase(AVCodecContext* ctx)
-    {
         _ctx = ctx;
         _ownsContext = false;
     }
 
-    protected static AVCodec* FindCoder(AVCodecID codecId, AVMediaType type, bool isEncoder)
+    protected static AVCodec* FindCodecFromId(AVCodecID codecId, bool enc)
     {
-        AVCodec* codec = isEncoder 
+        AVCodec* codec = enc 
             ? ffmpeg.avcodec_find_encoder(codecId)
             : ffmpeg.avcodec_find_decoder(codecId);
         
         if (codec == null) {
-            throw new NotSupportedException($"Could not find {(isEncoder ? "decoder" : "encoder")} for codec {codecId.ToString().Substring("AV_CODEC_ID_".Length)}.");
-        }
-        if (codec->type != type) {
-            throw new ArgumentException("Specified codec is not valid for the current media type.");
+            throw new NotSupportedException($"Could not find {(enc ? "decoder" : "encoder")} for codec {codecId.ToString().Substring("AV_CODEC_ID_".Length)}.");
         }
         return codec;
     }
+    protected static AVCodecContext* AllocContext(AVCodec* codec)
+    {
+        var ctx = ffmpeg.avcodec_alloc_context3(codec);
+
+        if (ctx == null) {
+            throw new OutOfMemoryException("Failed to allocate codec context.");
+        }
+        return ctx;
+    }
 
     /// <summary> Initializes the codec. </summary>
-    public virtual void Open()
+    public void Open()
     {
         if (!IsOpen) {
             ffmpeg.avcodec_open2(Handle, null, null).CheckError("Could not open codec");

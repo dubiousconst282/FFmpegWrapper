@@ -53,6 +53,8 @@ public unsafe class VideoFrame : MediaFrame
 
     public Span<T> GetRowSpan<T>(int y, int plane = 0) where T : unmanaged
     {
+        ThrowIfDisposed();
+
         //TODO: factor-in chroma height scale
         if ((uint)y >= (uint)Height || (uint)plane >= 4) {
             throw new ArgumentOutOfRangeException();
@@ -63,8 +65,10 @@ public unsafe class VideoFrame : MediaFrame
 
     public HWFrameMapping Map(HWFrameMapFlags flags)
     {
+        ThrowIfDisposed();
+
         var mappedFrame = ffmpeg.av_frame_alloc();
-        int result = ffmpeg.av_hwframe_map(mappedFrame, Handle, (int)flags);
+        int result = ffmpeg.av_hwframe_map(mappedFrame, _frame, (int)flags);
 
         if (result == 0) {
             return new HWFrameMapping(this, mappedFrame);
@@ -72,6 +76,20 @@ public unsafe class VideoFrame : MediaFrame
         ffmpeg.av_frame_free(&mappedFrame);
         throw result.ThrowError("Failed to create hardware frame mapping");
     }
+
+    /// <summary> Uploads data to this hardware frame. </summary>
+    public void TransferFrom(VideoFrame source)
+    {
+        ThrowIfDisposed();
+        ffmpeg.av_hwframe_transfer_data(_frame, source.Handle, 0).CheckError("Failed to upload data to hardware frame");
+    }
+    /// <summary> Downloads data from this hardware frame. </summary>
+    public void TransferTo(VideoFrame dest)
+    {
+        ThrowIfDisposed();
+        ffmpeg.av_hwframe_transfer_data(dest.Handle, _frame, 0).CheckError("Failed to download data from hardware frame");
+    }
+
 
     /// <summary> Fills this picture with black pixels. </summary>
     public void Clear()

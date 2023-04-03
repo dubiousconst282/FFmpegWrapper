@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 using Matrix3x3 = OpenTK.Mathematics.Matrix3;
 
-public unsafe class VideoPlayerWindow : GameWindow
+public unsafe class PlaybackWindow : GameWindow
 {
     private MediaDemuxer _demuxer;
     private MediaStream _stream;
@@ -27,7 +27,7 @@ public unsafe class VideoPlayerWindow : GameWindow
     private double _avgDecodeTime;
     private TimeSpan _timestamp;
 
-    public VideoPlayerWindow(string videoPath)
+    public PlaybackWindow(string videoPath)
         : base(
             new GameWindowSettings(),
             new NativeWindowSettings() {
@@ -51,7 +51,7 @@ public unsafe class VideoPlayerWindow : GameWindow
             });
 
         //HWDevice is ref-counted, it's ok to dispose of it here.
-        using var device = HardwareDevice.Alloc(bestConfig.DeviceType);
+        using var device = HardwareDevice.Create(bestConfig.DeviceType);
 
         if (device != null) {
             _decoder.SetupHardwareAccelerator(device, bestConfig.PixelFormat);
@@ -62,7 +62,6 @@ public unsafe class VideoPlayerWindow : GameWindow
         UpdateFrequency = 5; //don't waste CPU on update logic
     }
 
-    // Now, we start initializing OpenGL.
     protected override void OnLoad()
     {
         base.OnLoad();
@@ -84,10 +83,9 @@ public unsafe class VideoPlayerWindow : GameWindow
         _shader.AttachFile(ShaderType.FragmentShader, shaderBasePath + "solid_texture_y_uv.frag");
         _shader.Link();
 
-        _format = VertexFormat.FromStruct<EmptyVertex>(_shader);
-        
-        _emptyVbo = new BufferObject();
-        _emptyVbo.SetData<byte>(new byte[16]);
+        _format = VertexFormat.CreateEmpty();
+
+        _emptyVbo = new BufferObject(16, BufferStorageFlags.None);
 
         _textureY = new Texture2D(_decoder.Width, _decoder.Height, 1, SizedInternalFormat.R8);
         _textureUV = new Texture2D(_decoder.Width / 2, _decoder.Height / 2, 1, SizedInternalFormat.Rg8);
@@ -211,6 +209,4 @@ public unsafe class VideoPlayerWindow : GameWindow
         _textureUV.Dispose();
         _format.Dispose();
     }
-
-    struct EmptyVertex { }
 }

@@ -1,6 +1,6 @@
 ﻿namespace FFmpeg.Wrapper;
 
-public unsafe struct AudioFormat
+public unsafe readonly struct AudioFormat
 {
     public AVSampleFormat SampleFormat { get; }
     public int SampleRate { get; }

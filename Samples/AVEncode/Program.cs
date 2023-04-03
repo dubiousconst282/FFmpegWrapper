@@ -1,6 +1,5 @@
 using System.Diagnostics;
 
-using FFmpeg.AutoGen;
 using FFmpeg.Wrapper;
 
 if (args.Length < 1) {
@@ -26,7 +25,7 @@ muxer.Open();
 
 int numFrames = (int)(frameRate * 10 + 1); //encode 10s of video
 for (int i = 0; i < numFrames; i++) {
-    videoFrame.PresentationTimestamp = ffmpeg.av_rescale_q(i, ffmpeg.av_inv_q(videoEnc.FrameRate), videoEnc.TimeBase);
+    videoFrame.PresentationTimestamp = videoEnc.GetFramePts(frameNumber: i);
     GenerateFrame(videoFrame);
     muxer.EncodeAndWrite(videoStream, videoEnc, videoFrame);
 

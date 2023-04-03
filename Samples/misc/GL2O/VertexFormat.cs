@@ -9,9 +9,12 @@ public class VertexFormat : GLObject
 
     private VertexFormat(int stride)
     {
-        Id = GL.GenVertexArray();
+        GL.CreateVertexArrays(1, out int id);
+        Id = id;
         Stride = stride;
     }
+
+    public static VertexFormat CreateEmpty() => new VertexFormat(0);
 
     public static unsafe VertexFormat FromStruct<T>(ShaderProgram shader) where T : unmanaged
     {

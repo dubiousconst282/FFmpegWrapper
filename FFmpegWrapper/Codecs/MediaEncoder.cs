@@ -7,8 +7,8 @@ public abstract unsafe class MediaEncoder : CodecBase
         set => SetOrThrowIfOpen(ref _ctx->bit_rate, value);
     }
 
-    internal MediaEncoder(AVCodecID codecId, AVMediaType parentType)
-        : base(FindCoder(codecId, parentType, isEncoder: true)) { }
+    public MediaEncoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
+        : base(ctx, expectedType, takeOwnership) { }
 
     public void SetOption(string name, string value)
     {
@@ -32,5 +32,11 @@ public abstract unsafe class MediaEncoder : CodecBase
             result.ThrowIfError("Could not encode frame");
         }
         return result == 0;
+    }
+
+    /// <summary> Returns the correct <see cref="MediaFrame.PresentationTimestamp"/> for the given timestamp, in respect to <see cref="CodecBase.TimeBase"/>. </summary>
+    public long GetFramePts(TimeSpan time)
+    {
+        return ffmpeg.av_rescale_q(time.Ticks, new() { num = 1, den = (int)TimeSpan.TicksPerSecond }, TimeBase);
     }
 }

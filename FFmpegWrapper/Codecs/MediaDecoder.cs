@@ -2,15 +2,8 @@
 
 public abstract unsafe class MediaDecoder : CodecBase
 {
-    public MediaDecoder(AVCodecID codecId, AVMediaType parentType)
-        : base(FindCoder(codecId, parentType, isEncoder: false)) { }
-
-    public MediaDecoder(AVCodecContext* ctx, AVMediaType parentType) : base(ctx)
-    {
-        if (ctx->codec->type != parentType) {
-            throw new ArgumentException("Specified codec is not valid for the current media type.");
-        }
-    }
+    public MediaDecoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
+        : base(ctx, expectedType, takeOwnership) { }
 
     public void SendPacket(MediaPacket? pkt)
     {

@@ -30,13 +30,17 @@ public unsafe class AudioEncoder : MediaEncoder
     public ReadOnlySpan<int> SupportedSampleRates
         => Helpers.GetSpanFromSentinelTerminatedPtr(_ctx->codec->supported_samplerates, 0);
 
-    public AudioEncoder(AVCodecID codec)
-        : base(codec, AVMediaType.AVMEDIA_TYPE_AUDIO) { }
-    public AudioEncoder(AVCodecID codec, AudioFormat format, int bitrate)
-        : this(codec)
+    public AudioEncoder(AVCodecID codecId, in AudioFormat format, int bitrate)
+        : this(FindCodecFromId(codecId, enc: true), format, bitrate) { }
+
+    public AudioEncoder(AVCodec* codec, in AudioFormat format, int bitrate)
+        : this(AllocContext(codec))
     {
         Format = format;
         BitRate = bitrate;
         TimeBase = new AVRational() { den = format.SampleRate, num = 1 };
     }
+
+    public AudioEncoder(AVCodecContext* ctx, bool takeOwnership = true)
+        : base(ctx, MediaTypes.Audio, takeOwnership) { }
 }

@@ -8,11 +8,14 @@ public unsafe class VideoDecoder : MediaDecoder
 
     public PictureFormat FrameFormat => new(Width, Height, PixelFormat);
 
-    public VideoDecoder(AVCodecContext* ctx)
-        : base(ctx, AVMediaType.AVMEDIA_TYPE_VIDEO) { }
+    public VideoDecoder(AVCodecID codecId)
+        : this(FindCodecFromId(codecId, enc: false)) { }
 
-    public VideoDecoder(AVCodecID codec)
-        : base(codec, AVMediaType.AVMEDIA_TYPE_VIDEO) { }
+    public VideoDecoder(AVCodec* codec)
+        : this(AllocContext(codec)) { }
+
+    public VideoDecoder(AVCodecContext* ctx, bool takeOwnership = true)
+        : base(ctx, MediaTypes.Video, takeOwnership) { }
 
     //Used to prevent callback pointer from being GC collected
     AVCodecContext_get_format? _chooseHwPixelFmt;
@@ -33,29 +36,20 @@ public unsafe class VideoDecoder : MediaDecoder
     }
 
     /// <summary> Returns a new list containing all hardware acceleration configurations marked with `AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX`. </summary>
-    public List<HWConfigDesc> GetHardwareConfigs()
+    public List<CodecHardwareConfig> GetHardwareConfigs()
     {
-        var configs = new List<HWConfigDesc>();
+        ThrowIfDisposed();
 
-        for (int i = 0; ; i++) {
-            var config = ffmpeg.avcodec_get_hw_config(_ctx->codec, i);
-            if (config == null) break;
-            
-            //AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX
-            if ((config->methods & 0x01) == 0) continue;
+        var configs = new List<CodecHardwareConfig>();
 
-            configs.Add(new() {
-                DeviceType = config->device_type,
-                PixelFormat = config->pix_fmt,
-            });
+        int i = 0;
+        AVCodecHWConfig* config;
+
+        while ((config = ffmpeg.avcodec_get_hw_config(_ctx->codec, i++)) != null) {
+            if ((config->methods & (int)CodecHardwareMethods.DeviceContext) != 0) {
+                configs.Add(new CodecHardwareConfig(_ctx->codec, config));
+            }
         }
         return configs;
-    }
-
-
-    public readonly struct HWConfigDesc
-    {
-        public AVPixelFormat PixelFormat { get; init; }
-        public AVHWDeviceType DeviceType { get; init; }
     }
 }

@@ -14,6 +14,14 @@ public static class PixelFormats
     /// <summary>planar YUV 4:1:1, 12bpp, (1 Cr &amp; Cb sample per 4x1 Y samples)</summary>
     public const AVPixelFormat YUV411P = AVPixelFormat.AV_PIX_FMT_YUV411P;
 
+    /// <summary>planar YUV 4:2:0, 12bpp, 1 plane for Y and 1 plane for the UV components, which are interleaved (first byte U and the following byte V)</summary>
+    public const AVPixelFormat NV12 = AVPixelFormat.AV_PIX_FMT_NV12;
+
+    /// <summary>like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, little-endian (each component takes 16-bits)</summary>
+    public const AVPixelFormat P010LE = AVPixelFormat.AV_PIX_FMT_P010LE;
+    /// <summary>like NV12, with 10bpp per component, data in the high bits, zeros in the low bits, big-endian (each component takes 16-bits)</summary>
+    public const AVPixelFormat P010BE = AVPixelFormat.AV_PIX_FMT_P010BE;
+
     /// <summary>packed RGB 8:8:8, 24bpp, RGBRGB...</summary>
     public const AVPixelFormat RGB24 = AVPixelFormat.AV_PIX_FMT_RGB24;
     /// <summary>packed RGB 8:8:8, 24bpp, BGRBGR...</summary>

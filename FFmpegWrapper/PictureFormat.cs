@@ -1,6 +1,6 @@
 ﻿namespace FFmpeg.Wrapper;
 
-public struct PictureFormat
+public readonly struct PictureFormat
 {
     public int Width { get; }
     public int Height { get; }

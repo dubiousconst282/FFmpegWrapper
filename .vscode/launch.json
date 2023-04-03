@@ -55,5 +55,18 @@
             "console": "internalConsole",
             "stopAtEntry": false
         },
+        {
+            "name": "Launch HWEncode",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/HWEncode/bin/Debug/HWEncode.dll",
+            "args": [
+                "hwencode.mp4"
+            ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
     ]
 }

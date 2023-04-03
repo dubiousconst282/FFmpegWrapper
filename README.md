@@ -13,6 +13,7 @@ See the [samples](./Samples/) directory for full code samples.
 - [Encoding procedural audio and video](./Samples/AVEncode/Program.cs)
 - [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
 - [Hardware decoding and toy OpenGL player](./Samples/HWDecode/VideoPlayerWindow.cs)
+- [Hardware encoding](./Samples/HWEncode/PlaybackWindow.cs)
 
 ### Showcase: Basic video encoding
 ```cs
@@ -27,7 +28,7 @@ var stream = muxer.AddStream(encoder);
 muxer.Open();
 
 for (int i = 0; i < 24 * 10; i++) { //Encode 10s of video
-    frame.PresentationTimestamp = ffmpeg.av_rescale_q(i, ffmpeg.av_inv_q(videoEnc.FrameRate), videoEnc.TimeBase);
+    frame.PresentationTimestamp = encoder.GetFramePts(frameNumber: i);
     GenerateFrame(frame); //Fill `frame` with something interesting...
     muxer.EncodeAndWrite(stream, encoder, frame); //all-in-one: send_frame(), receive_packet(), rescale_ts(), write_interleaved()
 }
