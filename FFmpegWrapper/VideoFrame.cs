@@ -42,7 +42,9 @@ public unsafe class VideoFrame : MediaFrame
     /// <param name="takeOwnership">True if <paramref name="frame"/> should be freed when Dispose() is called.</param>
     public VideoFrame(AVFrame* frame, bool clearToBlack = false, bool takeOwnership = false)
     {
-        ArgumentNullException.ThrowIfNull(frame);
+        if (frame == null) {
+            throw new ArgumentNullException(nameof(frame));
+        }
         _frame = frame;
         _ownsFrame = takeOwnership;
 

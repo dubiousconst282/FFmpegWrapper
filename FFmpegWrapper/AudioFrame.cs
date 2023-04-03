@@ -46,7 +46,9 @@ public unsafe class AudioFrame : MediaFrame
     /// <param name="takeOwnership">True if <paramref name="frame"/> should be freed when Dispose() is called.</param>
     public AudioFrame(AVFrame* frame, bool takeOwnership = false)
     {
-        ArgumentNullException.ThrowIfNull(frame);
+        if (frame == null) {
+            throw new ArgumentNullException(nameof(frame));
+        }
         _frame = frame;
         _ownsFrame = takeOwnership;
     }
