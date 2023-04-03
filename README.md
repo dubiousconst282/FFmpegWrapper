@@ -1,13 +1,16 @@
 # FFmpegWrapper
 Object-oriented FFmpeg API wrappers (powered by `FFmpeg.AutoGen`).
 
+![GitHub](https://img.shields.io/github/license/dubiousconst282/FFmpegWrapper)
+[![Nuget](https://img.shields.io/nuget/v/FFmpeg.ApiWrapper)](https://www.nuget.org/packages/FFmpeg.ApiWrapper)
+
 ---
 
 Using the ffmpeg API tends to be tedious and error prone, mainly due to the extensive need for struct setup and manual error checking.  
 This library aims to abstract away most of such code while still exposing pointers in order to allow for lower-level control.
 
 ## Examples
-See the [samples](./Samples/) directory for full code samples.
+Executable code samples are available in the [samples](./Samples/) directory.
 
 - [Thumbnail Extractor (video decode, seek)](./Samples/ThumbExtractor/Program.cs)
 - [Encoding procedural audio and video](./Samples/AVEncode/Program.cs)
@@ -28,10 +31,9 @@ var stream = muxer.AddStream(encoder);
 muxer.Open();
 
 for (int i = 0; i < 24 * 10; i++) { //Encode 10s of video
-    frame.PresentationTimestamp = encoder.GetFramePts(frameNumber: i);
-    GenerateFrame(frame); //Fill `frame` with something interesting...
+    frame.PresentationTimestamp = encoder.GetFramePts(frameNumber: i); //Based on framerate. Alt overload takes TimeSpan.
+    // ... fill `frame` with something interesting ...
     muxer.EncodeAndWrite(stream, encoder, frame); //all-in-one: send_frame(), receive_packet(), rescale_ts(), write_interleaved()
 }
-//Flush delayed frames in the encoder
-muxer.EncodeAndWrite(stream, encoder, null);
+muxer.EncodeAndWrite(stream, encoder, null); //flush delayed frames in the encoder
 ```
