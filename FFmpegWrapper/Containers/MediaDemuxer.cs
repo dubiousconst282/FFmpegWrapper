@@ -23,15 +23,16 @@ public unsafe class MediaDemuxer : FFObject
     public bool CanSeek => _ctx->pb->seekable != 0;
 
     public MediaDemuxer(string filename)
-        : this(filename, null, false) { }
+        : this(filename, null) { }
+
     public MediaDemuxer(IOContext ioc, bool leaveOpen = false)
-        : this(null, ioc.Handle, leaveOpen)
+        : this(null, ioc.Handle)
     {
         IOC = ioc;
         _iocLeaveOpen = leaveOpen;
     }
     
-    private MediaDemuxer(string? url, AVIOContext* pb, bool leaveOpen)
+    private MediaDemuxer(string? url, AVIOContext* pb)
     {
         _ctx = ffmpeg.avformat_alloc_context();
         if (_ctx == null) {

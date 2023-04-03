@@ -29,11 +29,14 @@ public unsafe class MediaMuxer : FFObject
         }
         ffmpeg.avio_open(&_ctx->pb, filename, ffmpeg.AVIO_FLAG_WRITE).CheckError("Could not open output file");
     }
-    public MediaMuxer(IOContext ioc, string formatExtension, bool leaveOpen = true)
+
+    public MediaMuxer(IOContext ioc, string formatExtension, bool leaveOpen = false)
         : this(ioc, ContainerTypes.GetOutputFormat(formatExtension), leaveOpen) { }
-    public MediaMuxer(IOContext ioc, AVOutputFormat* format, bool leaveOpen = true)
+
+    public MediaMuxer(IOContext ioc, AVOutputFormat* format, bool leaveOpen = false)
     {
         IOC = ioc;
+        _iocLeaveOpen = leaveOpen;
 
         _ctx = ffmpeg.avformat_alloc_context();
         if (_ctx == null) {
