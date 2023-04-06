@@ -19,6 +19,8 @@ Executable code samples are available in the [samples](./Samples/) directory.
 - [Hardware encoding](./Samples/HWEncode/PlaybackWindow.cs)
 - [Audio and video transcoding](./Samples/AVTranscode/Program.cs)
 
+Note ffmpeg binary paths must be specified manually through `ffmpeg.RootPath`, as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
+
 ### Showcase: Basic video encoding
 ```cs
 using var muxer = new MediaMuxer("output.mp4");
