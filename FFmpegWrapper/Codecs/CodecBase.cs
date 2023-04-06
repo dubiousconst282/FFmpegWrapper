@@ -25,8 +25,6 @@ public unsafe abstract class CodecBase : FFObject
         get => _ctx->framerate;
         set => SetOrThrowIfOpen(ref _ctx->framerate, value);
     }
-    /// <summary> Timestamp scale, in seconds. </summary>
-    public double TimeScale => ffmpeg.av_q2d(_ctx->time_base);
 
     public Span<byte> ExtraData {
         get => GetExtraData();

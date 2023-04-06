@@ -11,15 +11,27 @@ public unsafe class MediaPacket : FFObject
         }
     }
 
+    /// <summary>
+    /// Presentation timestamp in <see cref="MediaStream.TimeBase"/> units; 
+    /// the time at which the decompressed packet will be presented to the user. <br/>
+    /// 
+    /// Can be <see langword="null"/> if it is not stored in the file. MUST be larger
+    /// or equal to <see cref="DecompressionTimestamp"/> as presentation cannot happen before
+    /// decompression, unless one wants to view hex dumps.  <br/>
+    /// 
+    /// Some formats misuse the terms dts and pts/cts to mean something different.
+    /// Such timestamps must be converted to true pts/dts before they are stored in AVPacket.
+    /// </summary>
     public long? PresentationTimestamp {
-        get => Helpers.GetTimestamp(_pkt->pts);
-        set => Helpers.SetTimestamp(ref _pkt->pts, value);
+        get => Helpers.GetPTS(_pkt->pts);
+        set => Helpers.SetPTS(ref _pkt->pts, value);
     }
     public long? DecompressionTimestamp {
-        get => Helpers.GetTimestamp(_pkt->dts);
-        set => Helpers.SetTimestamp(ref _pkt->dts, value);
+        get => Helpers.GetPTS(_pkt->dts);
+        set => Helpers.SetPTS(ref _pkt->dts, value);
     }
 
+    /// <summary> Duration of this packet in <see cref="MediaStream.TimeBase"/> units, 0 if unknown. Equals next_pts - this_pts in presentation order.  </summary>
     public long Duration {
         get => _pkt->duration;
         set => _pkt->duration = value;
@@ -29,7 +41,7 @@ public unsafe class MediaPacket : FFObject
         set => _pkt->stream_index = value;
     }
 
-    public Span<byte> Data => new Span<byte>(_pkt->data, _pkt->size);
+    public Span<byte> Data => new(_pkt->data, _pkt->size);
 
     public MediaPacket()
     {

@@ -12,10 +12,10 @@ public unsafe abstract class MediaFrame : FFObject
         }
     }
 
-    public long? BestEffortTimestamp => Helpers.GetTimestamp(_frame->best_effort_timestamp);
+    public long? BestEffortTimestamp => Helpers.GetPTS(_frame->best_effort_timestamp);
     public long? PresentationTimestamp {
-        get => Helpers.GetTimestamp(_frame->pts);
-        set => Helpers.SetTimestamp(ref _frame->pts, value);
+        get => Helpers.GetPTS(_frame->pts);
+        set => Helpers.SetPTS(ref _frame->pts, value);
     }
 
     protected override void Free()

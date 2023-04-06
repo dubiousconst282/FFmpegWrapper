@@ -40,6 +40,15 @@ internal static unsafe class Helpers
         return new ReadOnlySpan<T>(ptr, len);
     }
 
-    public static long? GetTimestamp(long pts) => pts != ffmpeg.AV_NOPTS_VALUE ? pts : null;
-    public static void SetTimestamp(ref long pts, long? value) => pts = value ?? ffmpeg.AV_NOPTS_VALUE;
+    public static long? GetPTS(long pts) => pts != ffmpeg.AV_NOPTS_VALUE ? pts : null;
+    public static void SetPTS(ref long pts, long? value) => pts = value ?? ffmpeg.AV_NOPTS_VALUE;
+
+    public static TimeSpan? GetTimeSpan(long pts, AVRational timeBase)
+    {
+        if (pts == ffmpeg.AV_NOPTS_VALUE) {
+            return null;
+        }
+        long ticks = ffmpeg.av_rescale_q(pts, timeBase, new AVRational() { num = 1, den = (int)TimeSpan.TicksPerSecond });
+        return TimeSpan.FromTicks(ticks);
+    }
 }

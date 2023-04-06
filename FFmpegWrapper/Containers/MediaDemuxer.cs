@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace FFmpeg.Wrapper;
 
@@ -16,7 +16,7 @@ public unsafe class MediaDemuxer : FFObject
     public IOContext? IOC { get; }
     private bool _iocLeaveOpen;
 
-    public TimeSpan Duration => TimeSpan.FromSeconds(_ctx->duration / (double)ffmpeg.AV_TIME_BASE);
+    public TimeSpan? Duration => Helpers.GetTimeSpan(_ctx->duration, new() { num = 1, den = ffmpeg.AV_TIME_BASE });
 
     public ImmutableArray<MediaStream> Streams { get; }
 

@@ -16,18 +16,17 @@ using var packet = new MediaPacket();
 using var frame = new VideoFrame();
 
 for (int i = 0; i < numFrames; i++) {
-    var timestamp = demuxer.Duration * ((i + 0.5) / numFrames);
-    demuxer.Seek(timestamp);
+    demuxer.Seek(demuxer.Duration!.Value * ((i + 0.5) / numFrames));
     decoder.Flush(); //Discard any frames decoded before the seek
 
-    //Read the file until we can decode a frame for the selected stream
+    //Read the file until we can decode a frame from the selected stream
     while (demuxer.Read(packet)) {
         if (packet.StreamIndex != stream.Index) continue; //Ignore packets from other streams
 
         decoder.SendPacket(packet);
         
         if (decoder.ReceiveFrame(frame)) {
-            var ts = TimeSpan.FromSeconds(frame.PresentationTimestamp!.Value * stream.TimeScale);
+            var ts = stream.GetTimestamp(frame.PresentationTimestamp!.Value);
             Directory.CreateDirectory(outDir);
             frame.Save($"{outDir}/{i}_{ts:hh\\.mm\\.ss}.jpg");
             break;

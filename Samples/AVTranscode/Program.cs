@@ -31,7 +31,7 @@ while (demuxer.Read(packet)) {
     
     if (sw.ElapsedMilliseconds >= 1000) {
         var stream = demuxer.Streams[packet.StreamIndex];
-        var currentPos = TimeSpan.FromSeconds(packet.PresentationTimestamp!.Value * stream.TimeScale);
+        var currentPos = stream.GetTimestamp(packet.PresentationTimestamp!.Value);
         Console.WriteLine($"Progress: {currentPos:mm\\:ss}/{demuxer.Duration:mm\\:ss} Rate={(currentPos - lastPos) / sw.Elapsed:0.0}x\r");
         lastPos = currentPos;
         sw.Restart();

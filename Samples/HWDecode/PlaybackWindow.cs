@@ -132,7 +132,7 @@ public unsafe class PlaybackWindow : GameWindow
         while (true) {
             //Check if there's a decoded frame available before reading more packets.
             if (_decoder.ReceiveFrame(_frame)) {
-                _timestamp = TimeSpan.FromSeconds(_frame.PresentationTimestamp!.Value * _stream.TimeScale);
+                _timestamp = _stream.GetTimestamp(_frame.PresentationTimestamp!.Value);
                 UploadFrame();
                 return true;
             }
