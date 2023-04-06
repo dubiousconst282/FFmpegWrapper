@@ -47,7 +47,6 @@ public unsafe class PlaybackWindow : GameWindow
             _encoder.SetOption("preset", "veryslow");
             _encoder.SetOption("look_ahead", "1");
         }
-        _encoder.Open();
 
         _muxer = new MediaMuxer(outVideoPath);
         _stream = _muxer.AddStream(_encoder);

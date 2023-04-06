@@ -12,7 +12,6 @@ double frameRate = 30.0;
 
 using var encoder = new VideoEncoder(CodecIds.H264, new PictureFormat(1280, 720, PixelFormats.YUV420P), frameRate, bitrate: 1200_000);
 using var frame = new VideoFrame(encoder.FrameFormat);
-encoder.Open();
 
 var stream = muxer.AddStream(encoder);
 muxer.Open();

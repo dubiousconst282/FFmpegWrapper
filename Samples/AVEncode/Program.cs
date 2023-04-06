@@ -13,15 +13,15 @@ double frameRate = 24.0;
 using var videoFrame = new VideoFrame(1280, 720, PixelFormats.YUV420P);
 using var videoEnc = new VideoEncoder(CodecIds.H264, videoFrame.Format, frameRate, bitrate: 900_000);
 videoEnc.SetOption("preset", "faster"); //libx264 specific
-videoEnc.Open();
 
+//Note that some audio encoders require specific frame formats, requiring use of `SwResampler` (see AVTranscode sample).
+//There may also be frame size constraints, see `AudioEncoder.FrameSize`.
 using var audioFrame = new AudioFrame(SampleFormats.FloatPlanar, 48000, 2, 1024) { PresentationTimestamp = 0 };
 using var audioEnc = new AudioEncoder(CodecIds.AAC, audioFrame.Format, bitrate: 128_000);
-audioEnc.Open();
 
 var videoStream = muxer.AddStream(videoEnc);
 var audioStream = muxer.AddStream(audioEnc);
-muxer.Open();
+muxer.Open(); //Open encoders and write header
 
 int numFrames = (int)(frameRate * 10 + 1); //encode 10s of video
 for (int i = 0; i < numFrames; i++) {

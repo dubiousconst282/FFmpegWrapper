@@ -15,10 +15,10 @@ public unsafe class MediaMuxer : FFObject
     public IOContext? IOC { get; }
     private bool _iocLeaveOpen;
 
-    private List<MediaStream> _streams = new List<MediaStream>();
+    private List<(MediaStream Stream, MediaEncoder Encoder)> _streams = new();
     private MediaPacket? _tempPacket;
 
-    public IReadOnlyList<MediaStream> Streams => _streams;
+    public IReadOnlyList<MediaStream> Streams => _streams.Select(s => s.Stream).ToList();
 
     public bool IsOpen { get; private set; } = false;
 
@@ -54,6 +54,10 @@ public unsafe class MediaMuxer : FFObject
         if (IsOpen) {
             throw new InvalidOperationException("Cannot add new streams once the muxer is open.");
         }
+        if (encoder.IsOpen) {
+            //This is an unfortunate limitation, but the GlobalHeader flag must be set before the encoder is open.
+            throw new InvalidOperationException("Cannot add stream with an already open encoder.");
+        }
 
         AVStream* stream = ffmpeg.avformat_new_stream(_ctx, encoder.Handle->codec);
         if (stream == null) {
@@ -61,7 +65,6 @@ public unsafe class MediaMuxer : FFObject
         }
         stream->id = (int)_ctx->nb_streams - 1;
         stream->time_base = encoder.TimeBase;
-        ffmpeg.avcodec_parameters_from_context(stream->codecpar, encoder.Handle).CheckError("Could not copy the encoder parameters to the stream.");
 
         //Some formats want stream headers to be separate.
         if ((_ctx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0) {
@@ -69,28 +72,24 @@ public unsafe class MediaMuxer : FFObject
         }
 
         var st = new MediaStream(stream);
-        _streams.Add(st);
+        _streams.Add((st, encoder));
         return st;
     }
 
     /// <summary> Opens all streams and writes the container header. </summary>
+    /// <remarks> This method will also open all encoders passed to <see cref="AddStream(MediaEncoder)"/>. </remarks>
     public void Open()
-    {
-        Open(null);
-    }
-
-    /// <summary> Opens all streams and writes the container header. </summary>
-    /// <param name="options">
-    /// Options passed to <see cref="ffmpeg.avformat_write_header(AVFormatContext*, AVDictionary**)"/>. 
-    /// When this method returns, the value of this parameter will be destroyed and replaced with a dict containing options that were not found.
-    /// </param>
-    public void Open(AVDictionary** options)
     {
         ThrowIfDisposed();
         if (IsOpen) {
-            throw new InvalidOperationException("Muxer is already open");
+            throw new InvalidOperationException("Muxer is already open.");
         }
-        ffmpeg.avformat_write_header(_ctx, options).CheckError("Could not write header to output file");
+
+        foreach (var (stream, encoder) in _streams) {
+            encoder.Open();
+            ffmpeg.avcodec_parameters_from_context(stream.Handle->codecpar, encoder.Handle).CheckError("Could not copy the encoder parameters to the stream.");
+        }
+        ffmpeg.avformat_write_header(_ctx, null).CheckError("Could not write header to output file");
         IsOpen = true;
     }
 
@@ -105,7 +104,7 @@ public unsafe class MediaMuxer : FFObject
     {
         ThrowIfNotOpen();
 
-        if (_streams[stream.Index] != stream) {
+        if (_streams[stream.Index].Stream != stream) {
             throw new ArgumentException("Specified stream is not owned by the muxer.");
         }
         _tempPacket ??= new();

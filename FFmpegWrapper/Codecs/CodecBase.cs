@@ -12,7 +12,7 @@ public unsafe abstract class CodecBase : FFObject
             return _ctx;
         }
     }
-    public bool IsOpen { get; private set; } = false;
+    public bool IsOpen => ffmpeg.avcodec_is_open(Handle) != 0;
 
     public string CodecName => new string((sbyte*)_ctx->codec->name);
     public string CodecLongName => new string((sbyte*)_ctx->codec->long_name);
@@ -70,12 +70,11 @@ public unsafe abstract class CodecBase : FFObject
         return ctx;
     }
 
-    /// <summary> Initializes the codec. </summary>
+    /// <summary> Initializes the codec if not already. </summary>
     public void Open()
     {
         if (!IsOpen) {
             ffmpeg.avcodec_open2(Handle, null, null).CheckError("Could not open codec");
-            IsOpen = true;
         }
     }
 
