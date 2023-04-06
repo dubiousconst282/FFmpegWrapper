@@ -78,6 +78,27 @@ public unsafe abstract class CodecBase : FFObject
         }
     }
 
+    /// <summary> Enables or disables multi-threading if supported by the codec implementation. </summary>
+    /// <param name="threadCount">Number of threads to use. 1 to disable multi-threading, 0 to automatically pick a value.</param>
+    /// <param name="preferFrameSlices">Allow only multi-threaded processing of frame slices rather than individual frames. Setting to true may reduce delay. </param>
+    public void SetThreadCount(int threadCount, bool preferFrameSlices = false)
+    {
+        ThrowIfOpen();
+
+        _ctx->thread_count = threadCount;
+        int caps = _ctx->codec->capabilities;
+
+        if ((caps & ffmpeg.AV_CODEC_CAP_SLICE_THREADS) != 0 && preferFrameSlices) {
+            _ctx->thread_type = ffmpeg.FF_THREAD_SLICE;
+            return;
+        }
+        if ((caps & ffmpeg.AV_CODEC_CAP_FRAME_THREADS) != 0) {
+            _ctx->thread_type = ffmpeg.FF_THREAD_FRAME;
+            return;
+        }
+        _ctx->thread_count = 1; //no multi-threading capability
+    }
+
     /// <summary> Reset the decoder state / flush internal buffers. </summary>
     public virtual void Flush()
     {

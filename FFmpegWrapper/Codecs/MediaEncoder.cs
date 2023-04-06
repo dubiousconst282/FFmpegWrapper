@@ -37,6 +37,11 @@ public abstract unsafe class MediaEncoder : CodecBase
     /// <summary> Returns the correct <see cref="MediaFrame.PresentationTimestamp"/> for the given timestamp, in respect to <see cref="CodecBase.TimeBase"/>. </summary>
     public long GetFramePts(TimeSpan time)
     {
-        return ffmpeg.av_rescale_q(time.Ticks, new() { num = 1, den = (int)TimeSpan.TicksPerSecond }, TimeBase);
+        return GetFramePts(time.Ticks, new() { num = 1, den = (int)TimeSpan.TicksPerSecond });
+    }
+    /// <summary> Rescales the given timestamp to be in terms of <see cref="CodecBase.TimeBase"/>. </summary>
+    public long GetFramePts(long pts, AVRational timeBase)
+    {
+        return ffmpeg.av_rescale_q(pts, timeBase, TimeBase);
     }
 }

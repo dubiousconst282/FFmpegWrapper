@@ -68,5 +68,19 @@
             "console": "internalConsole",
             "stopAtEntry": false
         },
+        {
+            "name": "Launch AVTranscode",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/AVTranscode/bin/Debug/AVTranscode.dll",
+            "args": [
+                "sample.mp4",
+                "transcoded.mkv"
+            ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
     ]
 }

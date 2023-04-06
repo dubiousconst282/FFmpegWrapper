@@ -15,8 +15,9 @@ Executable code samples are available in the [samples](./Samples/) directory.
 - [Thumbnail Extractor (video decode, seek)](./Samples/ThumbExtractor/Program.cs)
 - [Encoding procedural audio and video](./Samples/AVEncode/Program.cs)
 - [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
-- [Hardware decoding and toy OpenGL player](./Samples/HWDecode/VideoPlayerWindow.cs)
+- [Hardware decoding and toy OpenGL player](./Samples/HWDecode/PlaybackWindow.cs)
 - [Hardware encoding](./Samples/HWEncode/PlaybackWindow.cs)
+- [Audio and video transcoding](./Samples/AVTranscode/Program.cs)
 
 ### Showcase: Basic video encoding
 ```cs
@@ -25,7 +26,6 @@ using var muxer = new MediaMuxer("output.mp4");
 using var frame = new VideoFrame(1280, 720, PixelFormats.YUV420P);
 using var encoder = new VideoEncoder(CodecIds.H264, frame.Format, frameRate: 24.0, bitrate: 900_000);
 encoder.SetOption("preset", "faster"); //libx264 specific
-encoder.Open();
 
 var stream = muxer.AddStream(encoder);
 muxer.Open();
