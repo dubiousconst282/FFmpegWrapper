@@ -42,6 +42,15 @@ public unsafe class MediaPacket : FFObject
         ffmpeg.av_packet_rescale_ts(Handle, sourceBase, destBase);
     }
 
+    /// <summary> Returns the underlying packet pointer after calling av_packet_unref() on it. </summary>
+    public AVPacket* UnrefAndGetHandle()
+    {
+        ThrowIfDisposed();
+
+        ffmpeg.av_packet_unref(_pkt);
+        return _pkt;
+    }
+
     protected override void Free()
     {
         fixed (AVPacket** pkt = &_pkt) {

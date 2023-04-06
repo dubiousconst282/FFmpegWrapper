@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 namespace FFmpeg.Wrapper;
 
@@ -83,7 +83,7 @@ public unsafe class MediaDemuxer : FFObject
     public bool Read(MediaPacket packet)
     {
         ThrowIfDisposed();
-        int result = ffmpeg.av_read_frame(_ctx, packet.Handle);
+        int result = ffmpeg.av_read_frame(_ctx, packet.UnrefAndGetHandle());
 
         if (result != 0 && result != ffmpeg.AVERROR_EOF) {
             result.ThrowError("Failed to read packet");
