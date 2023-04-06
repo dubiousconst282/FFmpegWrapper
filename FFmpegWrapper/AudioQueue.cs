@@ -2,7 +2,7 @@
 
 public unsafe class AudioQueue : FFObject
 {
-    private AVAudioFifo* _fifo; //be careful when using directly.
+    private AVAudioFifo* _fifo;
 
     public AVAudioFifo* Handle {
         get {
@@ -39,70 +39,37 @@ public unsafe class AudioQueue : FFObject
         }
         Write(frame.Data, frame.Count);
     }
-    public void Write(Span<short> src)
+    public void Write<T>(Span<T> src) where T : unmanaged
     {
-        if (Format != AVSampleFormat.AV_SAMPLE_FMT_S16) {
-            throw new InvalidOperationException("Incompatible format.");
-        }
-        fixed (short* s = src) {
-            Write((byte*)s, src.Length / NumChannels);
-        }
-    }
-    public void Write(Span<float> src)
-    {
-        if (Format != AVSampleFormat.AV_SAMPLE_FMT_FLT) {
-            throw new InvalidOperationException("Incompatible format.");
-        }
-        fixed (float* s = src) {
-            Write((byte*)s, src.Length / NumChannels);
+        CheckFormatForInterleavedBuffer(src.Length, sizeof(T));
+
+        fixed (T* pSrc = src) {
+            Write((byte**)&pSrc, src.Length / NumChannels);
         }
     }
-    public void Write(byte* samples, int count)
+    public void Write(byte** channels, int count)
     {
-        byte** planes = stackalloc byte*[1] { samples };
-        Write(planes, count);
-    }
-    public void Write(byte** planes, int count)
-    {
-        ffmpeg.av_audio_fifo_write(Handle, (void**)planes, count);
+        ffmpeg.av_audio_fifo_write(Handle, (void**)channels, count);
     }
 
     public int Read(AudioFrame frame, int count)
     {
-        if (count <= 0) {
-            throw new ArgumentOutOfRangeException(nameof(count), "Must be at least 1.");
-        }
-
-        if (count > frame.Capacity) {
-            throw new ArgumentOutOfRangeException(nameof(count), "Cannot read more samples than frame capacity.");
+        if (count <= 0 || count > frame.Capacity) {
+            throw new ArgumentOutOfRangeException(nameof(count));
         }
         if (frame.SampleFormat != Format || frame.NumChannels != NumChannels) {
-            throw new ArgumentException("Incompatible frame format.", nameof(frame));
+            throw new InvalidOperationException("Incompatible frame format.");
         }
         return frame.Count = Read(frame.Data, count);
     }
-    public int Read(Span<short> dest)
+
+    public int Read<T>(Span<T> dest) where T : unmanaged
     {
-        if (Format != AVSampleFormat.AV_SAMPLE_FMT_S16) {
-            throw new InvalidOperationException("Incompatible format.");
+        CheckFormatForInterleavedBuffer(dest.Length, sizeof(T));
+
+        fixed (T* pDest = dest) {
+            return Read((byte**)&pDest, dest.Length / NumChannels);
         }
-        fixed (short* s = dest) {
-            return Read((byte*)s, dest.Length / NumChannels);
-        }
-    }
-    public int Read(Span<float> dest)
-    {
-        if (Format != AVSampleFormat.AV_SAMPLE_FMT_FLT) {
-            throw new InvalidOperationException("Incompatible format.");
-        }
-        fixed (float* s = dest) {
-            return Read((byte*)s, dest.Length / NumChannels);
-        }
-    }
-    public int Read(byte* dest, int count)
-    {
-        byte** planes = stackalloc byte*[1] { dest };
-        return Read(planes, count);
     }
     public int Read(byte** dest, int count)
     {
@@ -112,6 +79,10 @@ public unsafe class AudioQueue : FFObject
     public void Clear()
     {
         ffmpeg.av_audio_fifo_reset(Handle);
+    }
+    public void Drain(int count)
+    {
+        ffmpeg.av_audio_fifo_drain(Handle, count).CheckError();
     }
 
     protected override void Free()
@@ -125,6 +96,16 @@ public unsafe class AudioQueue : FFObject
     {
         if (_fifo == null) {
             throw new ObjectDisposedException(nameof(AudioQueue));
+        }
+    }
+
+    private void CheckFormatForInterleavedBuffer(int length, int sampleSize)
+    {
+        if (ffmpeg.av_get_bytes_per_sample(Format) != sampleSize ||
+            ffmpeg.av_sample_fmt_is_planar(Format) != 0 ||
+            length % NumChannels != 0
+        ) {
+            throw new InvalidOperationException("Incompatible buffer format.");
         }
     }
 }

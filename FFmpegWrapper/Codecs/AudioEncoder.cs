@@ -25,6 +25,13 @@ public unsafe class AudioEncoder : MediaEncoder
         }
     }
 
+    /// <summary> Number of samples per channel in an audio frame (set after the encoder is opened). </summary>
+    /// <remarks>
+    /// Each submitted frame except the last must contain exactly frame_size samples per channel.
+    /// May be null when the codec has AV_CODEC_CAP_VARIABLE_FRAME_SIZE set, then the frame size is not restricted.
+    /// </remarks>
+    public int? FrameSize => _ctx->frame_size == 0 ? null : _ctx->frame_size;
+
     public ReadOnlySpan<AVSampleFormat> SupportedSampleFormats
         => Helpers.GetSpanFromSentinelTerminatedPtr(_ctx->codec->sample_fmts, AVSampleFormat.AV_SAMPLE_FMT_NONE);
     public ReadOnlySpan<int> SupportedSampleRates
