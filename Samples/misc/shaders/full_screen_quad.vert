@@ -3,8 +3,8 @@
 out vec2 v_FragCoord;
 
 void main() {
-    //Drawing a single-triangle may result in more efficient
-    //execution due to less fragment shader invocations.
+    //Drawing a single triangle may result in slightly more efficient
+    //execution due to less fragment shader invocations around the diagonals.
     //Details: https://stackoverflow.com/a/59739538
     const vec2 vertices[3] = vec2[](vec2(-1, -1), vec2(3, -1), vec2(-1, 3));
 

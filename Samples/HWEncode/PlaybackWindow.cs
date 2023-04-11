@@ -71,9 +71,9 @@ public unsafe class PlaybackWindow : GameWindow
         }, 0);
         GL.Enable(EnableCap.DebugOutput);
 
-        string shaderBasePath = AppContext.BaseDirectory + "Resources/shaders/";
+        string shaderBasePath = AppContext.BaseDirectory + "shaders/";
 
-        foreach (var file in Directory.GetFiles(shaderBasePath,"*.frag")) {
+        foreach (string file in Directory.GetFiles(shaderBasePath + "shadertoy/", "*.frag")) {
             Console.WriteLine("Loading shader " + Path.GetFileName(file));
 
             var shader = new ShaderProgram();
@@ -102,7 +102,7 @@ public unsafe class PlaybackWindow : GameWindow
         double time = _frameNo / ffmpeg.av_q2d(_encoder.FrameRate);
         int demoDuration = 5;
 
-        //Encode some previous rendered frame
+        //Encode some previously rendered frame
         if (_frameNo >= _pbos.Length) {
             EncodeFrame();
         }

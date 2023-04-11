@@ -6,7 +6,11 @@
   <ItemGroup>
     <PackageReference Include="OpenTK" Version="4.7.7" />
 
-    <Content Include="Resources/**/*.*" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../misc/GL2O/**/*.cs" />
+
+    <Content Include="../misc/shaders/**/*.*">
+      <Link>shaders/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

@@ -12,14 +12,14 @@ This library aims to abstract away most of such code while still exposing pointe
 ## Examples
 Executable code samples are available in the [samples](./Samples/) directory.
 
-- [Thumbnail Extractor (video decode, seek)](./Samples/ThumbExtractor/Program.cs)
-- [Encoding procedural audio and video](./Samples/AVEncode/Program.cs)
+- [Thumbnail Extractor (video decoding, seeking)](./Samples/ThumbExtractor/Program.cs)
+- [Encoding procedurally generated audio and video](./Samples/AVEncode/Program.cs)
 - [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
 - [Hardware decoding and toy OpenGL player](./Samples/HWDecode/PlaybackWindow.cs)
 - [Hardware encoding](./Samples/HWEncode/PlaybackWindow.cs)
 - [Audio and video transcoding](./Samples/AVTranscode/Program.cs)
 
-Note ffmpeg binary paths must be specified manually through `ffmpeg.RootPath`, as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
+Note ffmpeg binaries must be manually copied to the build directory, or specified though `ffmpeg.RootPath` as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
 
 ### Showcase: Basic video encoding
 ```cs

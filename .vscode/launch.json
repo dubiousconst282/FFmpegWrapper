@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/AVEncode/bin/Debug/AVEncode.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/AVEncode.dll",
             "args": [
                 "av_encode.mp4"
             ],
@@ -19,7 +19,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/ThumbExtractor/bin/Debug/ThumbExtractor.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/ThumbExtractor.dll",
             "args": [
                 "sample.mp4",
                 "thumbs/",
@@ -34,7 +34,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/SkiaInterop/bin/Debug/SkiaInterop.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/SkiaInterop.dll",
             "args": [
                 "skia_output.mp4",
             ],
@@ -47,7 +47,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/HWDecode/bin/Debug/HWDecode.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/HWDecode.dll",
             "args": [
                 "sample_x264_yuv420.mp4"
             ],
@@ -60,7 +60,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/HWEncode/bin/Debug/HWEncode.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/HWEncode.dll",
             "args": [
                 "hwencode.mp4"
             ],
@@ -73,7 +73,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/AVTranscode/bin/Debug/AVTranscode.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/AVTranscode.dll",
             "args": [
                 "sample.mp4",
                 "transcoded.mkv"

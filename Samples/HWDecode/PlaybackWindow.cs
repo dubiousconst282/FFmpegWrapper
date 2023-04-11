@@ -76,7 +76,7 @@ public unsafe class PlaybackWindow : GameWindow
         }, 0);
         GL.Enable(EnableCap.DebugOutput);
 
-        string shaderBasePath = AppContext.BaseDirectory + "Resources/shaders/";
+        string shaderBasePath = AppContext.BaseDirectory + "shaders/";
 
         _shader = new ShaderProgram("Full Screen Texture");
         _shader.AttachFile(ShaderType.VertexShader, shaderBasePath + "full_screen_quad.vert");
