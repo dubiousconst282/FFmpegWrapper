@@ -8,17 +8,27 @@ public unsafe class VideoFrame : MediaFrame
 
     public PictureFormat Format => new PictureFormat(Width, Height, PixelFormat);
 
-    /// <summary> Pointer to the pixel planes. </summary>
+    /// <summary> Pointers to the pixel data planes. </summary>
+    /// <remarks> These can point to the end of image data when used in combination with negative values in <see cref="RowSize"/>. </remarks>
     public byte** Data => (byte**)&_frame->data;
 
-    /// <summary> Line size for each plane. </summary>
-    public int* Strides => (int*)&_frame->linesize;
+    /// <summary> An array of positive or negative values indicating the size in bytes of each pixel row. </summary>
+    /// <remarks> 
+    /// - Values may be larger than the size of usable data -- there may be extra padding present for performance reasons. <br/>
+    /// - Values can be negative to achieve a vertically inverted iteration over image rows.
+    /// </remarks>
+    public int* RowSize => (int*)&_frame->linesize;
 
-    public bool IsHardwareFormat => (ffmpeg.av_pix_fmt_desc_get(PixelFormat)->flags & ffmpeg.AV_PIX_FMT_FLAG_HWACCEL) != 0;
+    /// <summary> Whether this frame is attached to a hardware frame context. </summary>
+    public bool IsHardwareFrame => _frame->hw_frames_ctx != null;
+
+    /// <summary> Whether the frame rows are flipped. Alias for <c>RowSize[0] &lt; 0</c>. </summary>
+    public bool IsVerticallyFlipped => _frame->linesize[0] < 0;
 
     /// <summary> Allocates a new empty <see cref="AVFrame"/>. </summary>
     public VideoFrame()
         : this(ffmpeg.av_frame_alloc(), clearToBlack: false, takeOwnership: true) { }
+
     public VideoFrame(PictureFormat fmt, bool clearToBlack = true)
         : this(fmt.Width, fmt.Height, fmt.PixelFormat, clearToBlack) { }
 
@@ -53,62 +63,119 @@ public unsafe class VideoFrame : MediaFrame
         }
     }
 
+    /// <summary> Returns a view over the pixel row for the specified plane. </summary>
+    /// <remarks> The returned span may be longer than <see cref="Width"/> due to padding. </remarks>
+    /// <param name="y">Row index, in top to bottom order.</param>
     public Span<T> GetRowSpan<T>(int y, int plane = 0) where T : unmanaged
     {
-        ThrowIfDisposed();
-
-        //TODO: factor-in chroma height scale
-        if ((uint)y >= (uint)Height || (uint)plane >= 4) {
+        if ((uint)y >= (uint)GetPlaneSize(plane).Height) {
             throw new ArgumentOutOfRangeException();
         }
-        int stride = Strides[plane];
-        return new Span<T>(&Data[plane][y * stride], stride / sizeof(T));
+        int stride = RowSize[plane];
+        return new Span<T>(&Data[plane][y * stride], Math.Abs(stride / sizeof(T)));
     }
 
-    public HWFrameMapping Map(HWFrameMapFlags flags)
+    /// <summary> Returns a view over the pixel data for the specified plane. </summary>
+    /// <remarks> Note that rows may be stored in reverse order depending on <see cref="IsVerticallyFlipped"/>. </remarks>
+    /// <param name="stride">Number of pixels per row.</param>
+    public Span<T> GetPlaneSpan<T>(int plane, out int stride) where T : unmanaged
+    {
+        int height = GetPlaneSize(plane).Height;
+
+        byte* data = _frame->data[(uint)plane];
+        int rowSize = _frame->linesize[(uint)plane];
+
+        if (rowSize < 0) {
+            data += rowSize * (height - 1);
+            rowSize *= -1;
+        }
+        stride = rowSize / sizeof(T);
+        return new Span<T>(data, checked(height * stride));
+    }
+
+    public (int Width, int Height) GetPlaneSize(int plane)
     {
         ThrowIfDisposed();
 
-        var mappedFrame = ffmpeg.av_frame_alloc();
-        int result = ffmpeg.av_hwframe_map(mappedFrame, _frame, (int)flags);
+        var size = (Width, Height);
+
+        //https://github.com/FFmpeg/FFmpeg/blob/c558fcf41e2027a1096d00b286954da2cc4ae73f/libavutil/imgutils.c#L111
+        if (plane == 0) {
+            return size;
+        }
+        var desc = ffmpeg.av_pix_fmt_desc_get(PixelFormat);
+
+        if (desc == null || (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_HWACCEL) != 0) {
+            throw new InvalidOperationException();
+        }
+        for (uint i = 0; i < 4; i++) {
+            if (desc->comp[i].plane != plane) continue;
+
+            if ((i == 1 || i == 2) && (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_RGB) == 0) {
+                size.Width = CeilShr(size.Width, desc->log2_chroma_w);
+                size.Height = CeilShr(size.Height, desc->log2_chroma_h);
+            }
+            return size;
+        }
+        throw new ArgumentOutOfRangeException(nameof(plane));
+
+        static int CeilShr(int x, int s) => (x + (1 << s) - 1) >> s;
+    }
+
+    /// <summary> Creates a hardware frame memory mapping. </summary>
+    public VideoFrame Map(HardwareFrameMappingFlags flags)
+    {
+        ThrowIfDisposed();
+
+        var mapping = ffmpeg.av_frame_alloc();
+        int result = ffmpeg.av_hwframe_map(mapping, _frame, (int)flags);
 
         if (result == 0) {
-            return new HWFrameMapping(this, mappedFrame);
+            mapping->width = _frame->width;
+            mapping->height = _frame->height;
+            return new VideoFrame(mapping, takeOwnership: true);
         }
-        ffmpeg.av_frame_free(&mappedFrame);
+        ffmpeg.av_frame_free(&mapping);
         throw result.ThrowError("Failed to create hardware frame mapping");
     }
-
-    /// <summary> Uploads data to this hardware frame. </summary>
-    public void TransferFrom(VideoFrame source)
-    {
-        ThrowIfDisposed();
-        ffmpeg.av_hwframe_transfer_data(_frame, source.Handle, 0).CheckError("Failed to upload data to hardware frame");
-    }
-    /// <summary> Downloads data from this hardware frame. </summary>
+    /// <summary> Copy data from this frame to <paramref name="dest"/>. At least one of <see langword="this"/> or <paramref name="dest"/> must be a hardware frame. </summary>
     public void TransferTo(VideoFrame dest)
     {
         ThrowIfDisposed();
-        ffmpeg.av_hwframe_transfer_data(dest.Handle, _frame, 0).CheckError("Failed to download data from hardware frame");
+        ffmpeg.av_hwframe_transfer_data(dest.Handle, _frame, 0).CheckError("Failed to transfer data from hardware frame");
     }
 
+    /// <summary> Gets an array of possible source or dest formats usable in <see cref="TransferTo(VideoFrame)"/>. </summary>
+    public AVPixelFormat[] GetHardwareTransferFormats(HardwareFrameTransferDirection direction)
+    {
+        ThrowIfDisposed();
+        AVPixelFormat* pFormats;
 
-    /// <summary> Fills this picture with black pixels. </summary>
+        if (ffmpeg.av_hwframe_transfer_get_formats(_frame->hw_frames_ctx, (AVHWFrameTransferDirection)direction, &pFormats, 0) < 0) {
+            return Array.Empty<AVPixelFormat>();
+        }
+        var formats = Helpers.GetSpanFromSentinelTerminatedPtr(pFormats, PixelFormats.None).ToArray();
+        ffmpeg.av_freep(&pFormats);
+
+        return formats;
+    }
+
+    /// <summary> Fills this frame with black pixels. </summary>
     public void Clear()
     {
         ThrowIfDisposed();
-        var strides = new long_array4();
+        var linesizes = new long_array4();
 
         for (uint i = 0; i < 4; i++) {
-            strides[i] = _frame->linesize[i];
+            linesizes[i] = _frame->linesize[i];
         }
         ffmpeg.av_image_fill_black(
-            ref Unsafe.As<byte_ptrArray8, byte_ptrArray4>(ref _frame->data), strides,
+            ref *(byte_ptrArray4*)&_frame->data, linesizes,
             PixelFormat, _frame->color_range, _frame->width, _frame->height
         ).CheckError("Failed to clear frame.");
     }
 
-    /// <summary> Saves this picture to the specified file. The format will be choosen based on the file extension. (Can be either JPG or PNG) </summary>
+    /// <summary> Saves this frame to the specified file. The format will be choosen based on the file extension. (Can be either JPG or PNG) </summary>
     /// <remarks> This is an unoptimized debug method. Production use is not recommended. </remarks>
     /// <param name="quality">JPEG: Quantization factor. PNG: ZLib compression level. 0-100</param>
     public void Save(string filename, int quality = 90, int outWidth = 0, int outHeight = 0)
@@ -149,63 +216,8 @@ public unsafe class VideoFrame : MediaFrame
         File.WriteAllBytes(filename, packet.Data.ToArray());
     }
 }
-public unsafe class HWFrameMapping : FFObject
-{
-    public VideoFrame SourceFrame { get; }
-    private AVFrame* _mapping;
-
-    public AVFrame* MappedFrame {
-        get {
-            ThrowIfDisposed();
-            return _mapping;
-        }
-    }
-
-    public AVPixelFormat PixelFormat => (AVPixelFormat)_mapping->format;
-
-    public byte** Data => (byte**)&_mapping->data;
-    public int* Strides => (int*)&_mapping->linesize;
-
-    internal HWFrameMapping(VideoFrame srcFrame, AVFrame* mappedFrame)
-    {
-        SourceFrame = srcFrame;
-        _mapping = mappedFrame;
-    }
-
-    public Span<T> GetPlaneSpan<T>(int plane) where T : unmanaged
-    {
-        //TODO: factor-in chroma height scale
-        if ((uint)plane >= 4) {
-            throw new ArgumentOutOfRangeException();
-        }
-        int stride = _mapping->linesize[(uint)plane];
-        ulong_array4 planeSizes = new();
-        long_array4 linesizes = new();
-
-        for (uint i = 0; i < 4; i++) {
-            linesizes[i] = _mapping->linesize[i];
-        }
-        ffmpeg.av_image_fill_plane_sizes(ref planeSizes, PixelFormat, SourceFrame.Height, in linesizes);
-        return new Span<T>(Data[plane], (int)(planeSizes[(uint)plane] / (uint)sizeof(T)));
-    }
-
-    protected override void Free()
-    {
-        if (_mapping != null) {
-            fixed (AVFrame** ppMapping = &_mapping) {
-                ffmpeg.av_frame_free(ppMapping);
-            }
-        }
-    }
-    private void ThrowIfDisposed()
-    {
-        if (_mapping == null) {
-            throw new ObjectDisposedException(nameof(HWFrameMapping));
-        }
-    }
-}
 /// <summary> Flags to apply to hardware frame memory mappings. </summary>
-public enum HWFrameMapFlags
+public enum HardwareFrameMappingFlags
 {
     /// <summary> The mapping must be readable. </summary>
     Read = 1 << 0,
@@ -223,4 +235,11 @@ public enum HWFrameMapFlags
     /// be much lower than normal memory.
     /// </summary>
     Direct = 1 << 3,
+}
+public enum HardwareFrameTransferDirection
+{
+    /// <summary> Transfer the data from the queried hw frame. </summary>
+    From = AVHWFrameTransferDirection.AV_HWFRAME_TRANSFER_DIRECTION_FROM,
+    /// <summary> Transfer the data to the queried hw frame. </summary>
+    To = AVHWFrameTransferDirection.AV_HWFRAME_TRANSFER_DIRECTION_TO,
 }

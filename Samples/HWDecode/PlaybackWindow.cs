@@ -147,25 +147,26 @@ public unsafe class PlaybackWindow : GameWindow
 
     private void UploadFrame()
     {
-        Debug.Assert(_frame.IsHardwareFormat); //TODO: implement support for SW frames
+        Debug.Assert(_frame.IsHardwareFrame); //TODO: implement support for SW frames
 
-        //There's no easy way to interop HW and GL surfaces, so we'll 
-        //have to do a copy which possibly trips through the CPU here.
-        //This seems to be quite fast with my iGPU, it will probably
-        //be quite slower with an discrete GPU though.
-        using var mapping = _frame.Map(HWFrameMapFlags.Read | HWFrameMapFlags.Direct);
+        //There's no easy way to interop between HW and GL surfaces,
+        //so we'll have to do a copy back to the CPU.
+        using var mapping = _frame.Map(HardwareFrameMappingFlags.Read | HardwareFrameMappingFlags.Direct);
 
-        Debug.Assert(mapping.PixelFormat == AVPixelFormat.AV_PIX_FMT_NV12);
+        var (pixelType, pixelStride) = mapping.PixelFormat switch {
+            PixelFormats.NV12   => (PixelType.UnsignedByte, 1),
+            PixelFormats.P010LE => (PixelType.UnsignedShort, 2),
+        };
 
         _textureY.SetPixels<byte>(
-            mapping.GetPlaneSpan<byte>(0),
+            mapping.GetPlaneSpan<byte>(0, out int strideY),
             0, 0, _frame.Width, _frame.Height,
-            PixelFormat.Red, PixelType.UnsignedByte, rowLength: mapping.Strides[0]);
+            PixelFormat.Red, pixelType, rowLength: strideY / pixelStride);
 
         _textureUV.SetPixels<byte>(
-            mapping.GetPlaneSpan<byte>(1),
+            mapping.GetPlaneSpan<byte>(1, out int strideUV),
             0, 0, _frame.Width / 2, _frame.Height / 2,
-            PixelFormat.Rg, PixelType.UnsignedByte, rowLength: mapping.Strides[1] / 2);
+            PixelFormat.Rg, pixelType, rowLength: strideUV / pixelStride / 2);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs e)
