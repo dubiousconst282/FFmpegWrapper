@@ -57,7 +57,7 @@ public unsafe class VideoEncoder : MediaEncoder
         : this(AllocContext(codec))
     {
         FrameFormat = format;
-        FrameRate = ffmpeg.av_d2q(frameRate, 10000);
+        FrameRate = ffmpeg.av_d2q(frameRate, 100_000);
         TimeBase = ffmpeg.av_inv_q(FrameRate);
         BitRate = bitrate;
     }

@@ -101,7 +101,7 @@ public unsafe class MediaDemuxer : FFObject
         if (!CanSeek) {
             throw new InvalidOperationException("Backing IO context is not seekable.");
         }
-        long ts = (long)Math.Max(timestamp.TotalSeconds * ffmpeg.AV_TIME_BASE, 0);
+        long ts = ffmpeg.av_rescale(timestamp.Ticks, ffmpeg.AV_TIME_BASE, TimeSpan.TicksPerSecond);
         return ffmpeg.av_seek_frame(_ctx, -1, ts, ffmpeg.AVSEEK_FLAG_BACKWARD) == 0;
     }
 
