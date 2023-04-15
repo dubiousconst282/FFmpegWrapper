@@ -20,7 +20,7 @@ public unsafe class MediaDemuxer : FFObject
 
     public ImmutableArray<MediaStream> Streams { get; }
 
-    public bool CanSeek => _ctx->pb->seekable != 0;
+    public bool CanSeek => _ctx->pb->seek.Pointer != IntPtr.Zero;
 
     public MediaDemuxer(string filename)
         : this(filename, null) { }

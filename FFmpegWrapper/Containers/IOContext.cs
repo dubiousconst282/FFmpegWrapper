@@ -31,11 +31,11 @@ public abstract unsafe class IOContext : FFObject
             buffer, bufferSize, canWrite ? 1 : 0, null,
             _readFn, _writeFn, _seekFn
         );
-        _ctx->seekable = canSeek ? ffmpeg.AVIO_SEEKABLE_NORMAL : 0;
 
         int ReadBridge(void* opaque, byte* buffer, int length)
         {
-            return Read(new Span<byte>(buffer, length));
+            int bytesRead = Read(new Span<byte>(buffer, length));
+            return bytesRead > 0 ? bytesRead : ffmpeg.AVERROR_EOF;
         }
         int WriteBridge(void* opaque, byte* buffer, int length)
         {

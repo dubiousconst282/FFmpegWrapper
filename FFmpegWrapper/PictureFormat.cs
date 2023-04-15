@@ -20,9 +20,9 @@ public readonly struct PictureFormat
     public PictureFormat GetScaled(int newWidth, int newHeight, AVPixelFormat newFormat = PixelFormats.None, bool keepAspectRatio = true, int align = 1)
     {
         if (keepAspectRatio) {
-            float scale = MathF.Min(newWidth / (float)Width, newHeight / (float)Height);
-            newWidth = (int)MathF.Round(Width * scale);
-            newHeight = (int)MathF.Round(Height * scale);
+            double scale = Math.Min(newWidth / (double)Width, newHeight / (double)Height);
+            newWidth = (int)Math.Round(Width * scale);
+            newHeight = (int)Math.Round(Height * scale);
         }
         if (newFormat == PixelFormats.None) {
             newFormat = PixelFormat;
