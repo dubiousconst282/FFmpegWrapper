@@ -54,7 +54,7 @@ public unsafe class PlaybackWindow : GameWindow
         using var device = HardwareDevice.Create(bestConfig.DeviceType);
 
         if (device != null) {
-            _decoder.SetupHardwareAccelerator(device, bestConfig.PixelFormat);
+            _decoder.SetupHardwareAccelerator(bestConfig, device);
         }
         _decoder.Open();
 

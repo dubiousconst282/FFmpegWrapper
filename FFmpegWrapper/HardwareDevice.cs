@@ -33,9 +33,14 @@ public unsafe class HardwareDevice : FFObject
         return new HardwareDevice(ctx);
     }
 
-    public HardwareFrameConstraints GetMaxFrameConstraints()
+    /// <inheritdoc cref="ffmpeg.av_hwdevice_get_hwframe_constraints(AVBufferRef*, void*)"/>
+    public HardwareFrameConstraints? GetMaxFrameConstraints()
     {
         var desc = ffmpeg.av_hwdevice_get_hwframe_constraints(_ctx, null);
+
+        if (desc == null) {
+            return null;
+        }
         var managedDesc = new HardwareFrameConstraints(desc);
         ffmpeg.av_hwframe_constraints_free(&desc);
         return managedDesc;

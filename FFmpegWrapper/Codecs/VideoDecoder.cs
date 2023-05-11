@@ -20,22 +20,26 @@ public unsafe class VideoDecoder : MediaDecoder
     //Used to prevent callback pointer from being GC collected
     AVCodecContext_get_format? _chooseHwPixelFmt;
 
-    public void SetupHardwareAccelerator(HardwareDevice device, params AVPixelFormat[] preferredPixelFormats)
+    /// <summary>
+    /// Before the decoder is open, setups hardware acceleration via the specified device. 
+    /// If the device does not support the input format, a software decoder will be used instead.
+    /// </summary>
+    public void SetupHardwareAccelerator(CodecHardwareConfig config, HardwareDevice device, HardwareFramePool? framePool = null)
     {
         ThrowIfOpen();
+        SetHardwareContext(config, device, framePool);
 
-        _ctx->hw_device_ctx = ffmpeg.av_buffer_ref(device.Handle);
         _ctx->get_format = _chooseHwPixelFmt = (ctx, pAvailFmts) => {
             for (var pFmt = pAvailFmts; *pFmt != PixelFormats.None; pFmt++) {
-                if (Array.IndexOf(preferredPixelFormats, *pFmt) >= 0) {
+                if (*pFmt == config.PixelFormat) {
                     return *pFmt;
                 }
             }
-            return PixelFormats.None;
+            return ctx->sw_pix_fmt;
         };
     }
 
-    /// <summary> Returns a new list containing all hardware acceleration configurations marked with `AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX`. </summary>
+    /// <summary> Returns a new list containing all hardware configurations that may work with the current codec. </summary>
     public List<CodecHardwareConfig> GetHardwareConfigs()
     {
         ThrowIfDisposed();

@@ -97,6 +97,19 @@ public unsafe abstract class CodecBase : FFObject
         _ctx->thread_count = 1; //no multi-threading capability
     }
 
+    protected void SetHardwareContext(CodecHardwareConfig config, HardwareDevice device, HardwareFramePool? framePool)
+    {
+        if (config.Codec != _ctx->codec || config.DeviceType != device.Type) {
+            throw new ArgumentException("Mismatching hardware codec config.");
+        }
+        _ctx->hw_device_ctx = ffmpeg.av_buffer_ref(device.Handle);
+        _ctx->hw_frames_ctx = framePool == null ? null : ffmpeg.av_buffer_ref(framePool.Handle);
+
+        if (framePool == null && (config.Methods & ~CodecHardwareMethods.FramesContext) == 0) {
+            throw new ArgumentException("Specified hardware codec config requires a frame pool to be provided.");
+        }
+    }
+
     /// <summary> Reset the decoder state / flush internal buffers. </summary>
     public virtual void Flush()
     {

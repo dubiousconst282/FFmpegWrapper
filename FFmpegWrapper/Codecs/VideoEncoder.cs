@@ -65,15 +65,10 @@ public unsafe class VideoEncoder : MediaEncoder
     public VideoEncoder(AVCodecContext* ctx, bool takeOwnership = true)
         : base(ctx, MediaTypes.Video, takeOwnership) { }
 
-    public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, double frameRate, int bitrate, HardwareDevice device, HardwareFramePool? framePool)
+    public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, double frameRate, int bitrate, HardwareDevice device, HardwareFramePool? framePool = null)
         : this(config.Codec, in format, frameRate, bitrate)
     {
-        _ctx->hw_device_ctx = ffmpeg.av_buffer_ref(device.Handle);
-        _ctx->hw_frames_ctx = framePool == null ? null : ffmpeg.av_buffer_ref(framePool.Handle);
-
-        if (framePool == null && (config.Methods & ~CodecHardwareMethods.FramesContext) == 0) {
-            throw new ArgumentException("Specified hardware encoder config requires a frame pool to be provided.");
-        }
+        SetHardwareContext(config, device, framePool);
     }
 
     /// <summary> Returns the correct <see cref="MediaFrame.PresentationTimestamp"/> for the given frame number, in respect to <see cref="CodecBase.FrameRate"/> and <see cref="CodecBase.TimeBase"/>. </summary>
@@ -88,8 +83,9 @@ public unsafe class VideoEncoder : MediaEncoder
             if (config.PixelFormat != format.PixelFormat) continue;
 
             var device = HardwareDevice.Create(config.DeviceType);
+            var constraints = device?.GetMaxFrameConstraints();
 
-            if (device != null && device.GetMaxFrameConstraints().IsValidFormat(format)) {
+            if (device != null && (constraints == null || constraints.IsValidFormat(format))) {
                 codecConfig = config;
                 return device;
             }

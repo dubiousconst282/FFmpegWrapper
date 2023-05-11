@@ -1,6 +1,6 @@
 namespace FFmpeg.Wrapper;
 
-public readonly struct HardwareFrameConstraints
+public class HardwareFrameConstraints
 {
     public AVPixelFormat[] ValidHardwareFormats { get; }
     public AVPixelFormat[] ValidSoftwareFormats { get; }
