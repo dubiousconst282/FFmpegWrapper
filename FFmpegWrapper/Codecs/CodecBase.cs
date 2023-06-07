@@ -44,7 +44,7 @@ public unsafe abstract class CodecBase : FFObject
             throw new ArgumentException("Specified codec is not valid for the current media type.");
         }
         _ctx = ctx;
-        _ownsContext = false;
+        _ownsContext = takeOwnership;
     }
 
     protected static AVCodec* FindCodecFromId(AVCodecID codecId, bool enc)
