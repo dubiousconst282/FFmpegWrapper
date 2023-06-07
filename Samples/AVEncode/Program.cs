@@ -66,8 +66,8 @@ static void GenerateAudio(AudioFrame frame)
     Debug.Assert(frame.SampleFormat == SampleFormats.FloatPlanar && frame.NumChannels == 2);
     int samplePos = (int)frame.PresentationTimestamp!.Value;
 
-    var samplesL = frame.GetChannelSamples<float>(0);
-    var samplesR = frame.GetChannelSamples<float>(1);
+    var samplesL = frame.GetSamples<float>(0);
+    var samplesR = frame.GetSamples<float>(1);
 
     for (int i = 0; i < frame.Count; i++) {
         float a = MathF.Sin((samplePos + i) * (MathF.Tau * 440.0f / frame.SampleRate)) * 0.1f;

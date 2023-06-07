@@ -2,7 +2,7 @@
 
 public abstract unsafe class MediaDecoder : CodecBase
 {
-    public MediaDecoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
+    public MediaDecoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
         : base(ctx, expectedType, takeOwnership) { }
 
     public void SendPacket(MediaPacket? pkt)

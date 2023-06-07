@@ -54,7 +54,7 @@ public unsafe class VideoEncoder : MediaEncoder
         : this(FindCodecFromId(codecId, enc: true), format, frameRate, bitrate) { }
 
     public VideoEncoder(AVCodec* codec, in PictureFormat format, double frameRate, int bitrate)
-        : this(AllocContext(codec))
+        : this(AllocContext(codec), takeOwnership: true)
     {
         FrameFormat = format;
         FrameRate = ffmpeg.av_d2q(frameRate, 100_000);
@@ -62,7 +62,7 @@ public unsafe class VideoEncoder : MediaEncoder
         BitRate = bitrate;
     }
 
-    public VideoEncoder(AVCodecContext* ctx, bool takeOwnership = true)
+    public VideoEncoder(AVCodecContext* ctx, bool takeOwnership)
         : base(ctx, MediaTypes.Video, takeOwnership) { }
 
     public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, double frameRate, int bitrate, HardwareDevice device, HardwareFramePool? framePool = null)

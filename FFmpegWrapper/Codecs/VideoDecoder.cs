@@ -12,9 +12,9 @@ public unsafe class VideoDecoder : MediaDecoder
         : this(FindCodecFromId(codecId, enc: false)) { }
 
     public VideoDecoder(AVCodec* codec)
-        : this(AllocContext(codec)) { }
+        : this(AllocContext(codec), takeOwnership: true) { }
 
-    public VideoDecoder(AVCodecContext* ctx, bool takeOwnership = true)
+    public VideoDecoder(AVCodecContext* ctx, bool takeOwnership)
         : base(ctx, MediaTypes.Video, takeOwnership) { }
 
     //Used to prevent callback pointer from being GC collected

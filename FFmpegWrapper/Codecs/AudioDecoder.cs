@@ -13,8 +13,8 @@ public unsafe class AudioDecoder : MediaDecoder
         : this(FindCodecFromId(codecId, enc: false)) { }
 
     public AudioDecoder(AVCodec* codec)
-        : this(AllocContext(codec)) { }
+        : this(AllocContext(codec), takeOwnership: true) { }
 
-    public AudioDecoder(AVCodecContext* ctx, bool takeOwnership = true)
+    public AudioDecoder(AVCodecContext* ctx, bool takeOwnership)
         : base(ctx, MediaTypes.Audio, takeOwnership) { }
 }

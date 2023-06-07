@@ -41,13 +41,13 @@ public unsafe class AudioEncoder : MediaEncoder
         : this(FindCodecFromId(codecId, enc: true), format, bitrate) { }
 
     public AudioEncoder(AVCodec* codec, in AudioFormat format, int bitrate)
-        : this(AllocContext(codec))
+        : this(AllocContext(codec), takeOwnership: true)
     {
         Format = format;
         BitRate = bitrate;
         TimeBase = new AVRational() { den = format.SampleRate, num = 1 };
     }
 
-    public AudioEncoder(AVCodecContext* ctx, bool takeOwnership = true)
+    public AudioEncoder(AVCodecContext* ctx, bool takeOwnership)
         : base(ctx, MediaTypes.Audio, takeOwnership) { }
 }

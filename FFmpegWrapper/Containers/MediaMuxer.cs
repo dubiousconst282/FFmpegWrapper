@@ -12,7 +12,7 @@ public unsafe class MediaMuxer : FFObject
     }
 
     public IOContext? IOC { get; }
-    private bool _iocLeaveOpen;
+    readonly bool _iocLeaveOpen;
 
     private List<(MediaStream Stream, MediaEncoder Encoder)> _streams = new();
     private MediaPacket? _tempPacket;

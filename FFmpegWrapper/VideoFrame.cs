@@ -27,7 +27,7 @@ public unsafe class VideoFrame : MediaFrame
 
     /// <summary> Allocates a new empty <see cref="AVFrame"/>. </summary>
     public VideoFrame()
-        : this(ffmpeg.av_frame_alloc(), clearToBlack: false, takeOwnership: true) { }
+        : this(ffmpeg.av_frame_alloc(), takeOwnership: true) { }
 
     public VideoFrame(PictureFormat fmt, bool clearToBlack = true)
         : this(fmt.Width, fmt.Height, fmt.PixelFormat, clearToBlack) { }
@@ -50,7 +50,7 @@ public unsafe class VideoFrame : MediaFrame
     }
     /// <summary> Wraps an existing <see cref="AVFrame"/> pointer. </summary>
     /// <param name="takeOwnership">True if <paramref name="frame"/> should be freed when Dispose() is called.</param>
-    public VideoFrame(AVFrame* frame, bool clearToBlack = false, bool takeOwnership = false)
+    public VideoFrame(AVFrame* frame, bool takeOwnership, bool clearToBlack = false)
     {
         if (frame == null) {
             throw new ArgumentNullException(nameof(frame));

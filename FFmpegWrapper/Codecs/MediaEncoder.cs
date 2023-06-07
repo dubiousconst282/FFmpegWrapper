@@ -7,7 +7,7 @@ public abstract unsafe class MediaEncoder : CodecBase
         set => SetOrThrowIfOpen(ref _ctx->bit_rate, value);
     }
 
-    public MediaEncoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
+    public MediaEncoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
         : base(ctx, expectedType, takeOwnership) { }
 
     public void SetOption(string name, string value)

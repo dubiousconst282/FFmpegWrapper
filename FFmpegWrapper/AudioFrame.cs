@@ -44,7 +44,7 @@ public unsafe class AudioFrame : MediaFrame
 
     /// <summary> Wraps an existing <see cref="AVFrame"/> into an <see cref="AudioFrame"/> instance. </summary>
     /// <param name="takeOwnership">True if <paramref name="frame"/> should be freed when Dispose() is called.</param>
-    public AudioFrame(AVFrame* frame, bool takeOwnership = false)
+    public AudioFrame(AVFrame* frame, bool takeOwnership)
     {
         if (frame == null) {
             throw new ArgumentNullException(nameof(frame));
@@ -53,7 +53,7 @@ public unsafe class AudioFrame : MediaFrame
         _ownsFrame = takeOwnership;
     }
 
-    public Span<T> GetChannelSamples<T>(int channel = 0) where T:unmanaged
+    public Span<T> GetSamples<T>(int channel = 0) where T : unmanaged
     {
         if ((uint)channel >= (uint)NumChannels || (!IsPlanar && channel != 0)) {
             throw new ArgumentOutOfRangeException();

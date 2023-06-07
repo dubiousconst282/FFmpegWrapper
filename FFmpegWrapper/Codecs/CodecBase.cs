@@ -36,7 +36,7 @@ public unsafe abstract class CodecBase : FFObject
 
     public AVMediaType CodecType => _ctx->codec_type;
 
-    internal CodecBase(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership = true)
+    internal CodecBase(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
     {
         if (ctx->codec->type != expectedType) {
             if (takeOwnership) ffmpeg.avcodec_free_context(&ctx);

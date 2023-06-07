@@ -14,7 +14,7 @@ public unsafe class MediaDemuxer : FFObject
     }
 
     public IOContext? IOC { get; }
-    private bool _iocLeaveOpen;
+    readonly bool _iocLeaveOpen;
 
     public TimeSpan? Duration => Helpers.GetTimeSpan(_ctx->duration, new() { num = 1, den = ffmpeg.AV_TIME_BASE });
 
