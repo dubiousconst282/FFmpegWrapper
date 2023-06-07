@@ -20,6 +20,8 @@ public unsafe class MediaDemuxer : FFObject
 
     public ImmutableArray<MediaStream> Streams { get; }
 
+    public MediaDictionary Metadata => new(&Handle->metadata);
+
     public bool CanSeek => _ctx->pb->seek.Pointer != IntPtr.Zero;
 
     public MediaDemuxer(string filename)

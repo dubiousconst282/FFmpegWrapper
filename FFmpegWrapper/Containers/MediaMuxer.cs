@@ -2,7 +2,6 @@
 
 public unsafe class MediaMuxer : FFObject
 {
-
     private AVFormatContext* _ctx;
 
     public AVFormatContext* Handle {
@@ -19,6 +18,8 @@ public unsafe class MediaMuxer : FFObject
     private MediaPacket? _tempPacket;
 
     public IReadOnlyList<MediaStream> Streams => _streams.Select(s => s.Stream).ToList();
+
+    public MediaDictionary Metadata => new(&Handle->metadata);
 
     public bool IsOpen { get; private set; } = false;
 
