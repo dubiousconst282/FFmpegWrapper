@@ -21,7 +21,12 @@ using var audioEnc = new AudioEncoder(CodecIds.AAC, audioFrame.Format, bitrate: 
 
 var videoStream = muxer.AddStream(videoEnc);
 var audioStream = muxer.AddStream(audioEnc);
-muxer.Open(); //Open encoders and write header
+
+var muxerOpts = new List<KeyValuePair<string, string>>();
+if (args[0].EndsWith(".mp4")) {
+    muxerOpts.Add(new("movflags", "+faststart"));
+}
+muxer.Open(muxerOpts); //Open encoders and write header
 
 int numFrames = (int)(frameRate * 10 + 1); //encode 10s of video
 for (int i = 0; i < numFrames; i++) {

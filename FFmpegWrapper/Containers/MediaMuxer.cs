@@ -81,6 +81,14 @@ public unsafe class MediaMuxer : FFObject
     /// <remarks> This method will also open all encoders passed to <see cref="AddStream(MediaEncoder)"/>. </remarks>
     public void Open()
     {
+        Open(Enumerable.Empty<KeyValuePair<string, string>>(), true);
+    }
+
+    /// <inheritdoc cref="Open()" />
+    /// <param name="options">A collection of AVFormatContext and muxer-private options. </param>
+    /// <param name="ignoreUnknownOptions">When false, throws <see cref="InvalidOperationException" /> when <paramref name="options" /> contains unknown or invalid entries. </param>
+    public void Open(IEnumerable<KeyValuePair<string, string>> options, bool ignoreUnknownOptions = false)
+    {
         ThrowIfDisposed();
         if (IsOpen) {
             throw new InvalidOperationException("Muxer is already open.");
@@ -90,7 +98,22 @@ public unsafe class MediaMuxer : FFObject
             encoder.Open();
             ffmpeg.avcodec_parameters_from_context(stream.Handle->codecpar, encoder.Handle).CheckError("Could not copy the encoder parameters to the stream.");
         }
-        ffmpeg.avformat_write_header(_ctx, null).CheckError("Could not write header to output file");
+
+        AVDictionary* rawOpts = null;
+        foreach (var entry in options) {
+            ffmpeg.av_dict_set(&rawOpts, entry.Key, entry.Value, 0);
+        }
+
+        ffmpeg.avformat_write_header(_ctx, &rawOpts).CheckError("Could not write header to output file");
+
+        try {
+            if (!ignoreUnknownOptions && ffmpeg.av_dict_count(rawOpts) > 0) {
+                string invalidKeys = string.Join("', '", new MediaDictionary(&rawOpts).Select(e => e.Key));
+                throw new InvalidOperationException($"Unknown or invalid muxer options (keys: '{invalidKeys}')");
+            }
+        } finally {
+            ffmpeg.av_dict_free(&rawOpts);
+        }
         IsOpen = true;
     }
 
