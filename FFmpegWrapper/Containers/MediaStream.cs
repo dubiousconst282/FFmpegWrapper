@@ -8,20 +8,24 @@ public unsafe class MediaStream
 
     public AVMediaType Type => Handle->codecpar->codec_type;
 
-    /// <summary> The fundamental unit of time (in seconds) in terms of which frame timestamps are represented. </summary>
+    /// <inheritdoc cref="AVStream.time_base" />
     public AVRational TimeBase => Handle->time_base;
 
     /// <summary> Pts of the first frame of the stream in presentation order, in stream time base. </summary>
     public long? StartTime => Helpers.GetPTS(Handle->start_time);
 
-    /// <summary> Decoding: duration of the stream, in stream time base. If a source file does not specify a duration, but does specify a bitrate, this value will be estimated from bitrate and file size. </summary>
+    /// <inheritdoc cref="AVStream.duration" />
     public TimeSpan? Duration => Helpers.GetTimeSpan(Handle->duration, TimeBase);
 
     public double AvgFrameRate => ffmpeg.av_q2d(Handle->avg_frame_rate);
 
     public MediaDictionary Metadata => new(&Handle->metadata);
 
+    /// <inheritdoc cref="AVStream.disposition" />
     public MediaStreamDisposition Disposition => (MediaStreamDisposition)Handle->disposition;
+
+    /// <inheritdoc cref="AVStream.codecpar" />
+    public MediaCodecParameters CodecPars => new(Handle->codecpar);
 
     public MediaStream(AVStream* stream)
     {
