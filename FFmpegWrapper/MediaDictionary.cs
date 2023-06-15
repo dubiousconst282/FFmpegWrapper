@@ -63,8 +63,8 @@ public unsafe struct MediaDictionary : IEnumerable<Entry>
 
         public Entry Current {
             get {
-                string key = Helpers.PtrToStringUTF8(_entry->key);
-                string val = Helpers.PtrToStringUTF8(_entry->value);
+                string key = Helpers.PtrToStringUTF8(_entry->key)!;
+                string val = Helpers.PtrToStringUTF8(_entry->value)!;
                 return new Entry(key, val);
             }
         }

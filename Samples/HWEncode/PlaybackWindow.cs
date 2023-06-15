@@ -43,7 +43,7 @@ public unsafe class PlaybackWindow : GameWindow
         //These renders look terribly blocky and artifacty even at relatively high bitrates for some reason (even with libx264).
         _encoder = new VideoEncoder(hwConfig, format, frameRate: 60, bitrate: 12000_000, device, null);
 
-        if (_encoder.CodecName == "h264_qsv") {
+        if (_encoder.Codec.Name == "h264_qsv") {
             _encoder.SetOption("preset", "veryslow");
             _encoder.SetOption("look_ahead", "1");
         }

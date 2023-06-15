@@ -14,8 +14,7 @@ public unsafe abstract class CodecBase : FFObject
     }
     public bool IsOpen => ffmpeg.avcodec_is_open(Handle) != 0;
 
-    public string CodecName => new string((sbyte*)_ctx->codec->name);
-    public string CodecLongName => new string((sbyte*)_ctx->codec->long_name);
+    public MediaCodec Codec => new(_ctx->codec);
 
     public AVRational TimeBase {
         get => _ctx->time_base;
@@ -47,20 +46,9 @@ public unsafe abstract class CodecBase : FFObject
         _ownsContext = takeOwnership;
     }
 
-    protected static AVCodec* FindCodecFromId(AVCodecID codecId, bool enc)
+    protected static AVCodecContext* AllocContext(MediaCodec codec)
     {
-        AVCodec* codec = enc 
-            ? ffmpeg.avcodec_find_encoder(codecId)
-            : ffmpeg.avcodec_find_decoder(codecId);
-        
-        if (codec == null) {
-            throw new NotSupportedException($"Could not find {(enc ? "decoder" : "encoder")} for codec {codecId.ToString().Substring("AV_CODEC_ID_".Length)}.");
-        }
-        return codec;
-    }
-    protected static AVCodecContext* AllocContext(AVCodec* codec)
-    {
-        var ctx = ffmpeg.avcodec_alloc_context3(codec);
+        var ctx = ffmpeg.avcodec_alloc_context3(codec.Handle);
 
         if (ctx == null) {
             throw new OutOfMemoryException("Failed to allocate codec context.");
@@ -99,7 +87,7 @@ public unsafe abstract class CodecBase : FFObject
 
     protected void SetHardwareContext(CodecHardwareConfig config, HardwareDevice device, HardwareFramePool? framePool)
     {
-        if (config.Codec != _ctx->codec || config.DeviceType != device.Type) {
+        if (config.Codec.Handle != _ctx->codec || config.DeviceType != device.Type) {
             throw new ArgumentException("Mismatching hardware codec config.");
         }
         _ctx->hw_device_ctx = ffmpeg.av_buffer_ref(device.Handle);

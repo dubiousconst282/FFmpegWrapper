@@ -32,15 +32,10 @@ public unsafe class AudioEncoder : MediaEncoder
     /// </remarks>
     public int? FrameSize => _ctx->frame_size == 0 ? null : _ctx->frame_size;
 
-    public ReadOnlySpan<AVSampleFormat> SupportedSampleFormats
-        => Helpers.GetSpanFromSentinelTerminatedPtr(_ctx->codec->sample_fmts, AVSampleFormat.AV_SAMPLE_FMT_NONE);
-    public ReadOnlySpan<int> SupportedSampleRates
-        => Helpers.GetSpanFromSentinelTerminatedPtr(_ctx->codec->supported_samplerates, 0);
+    public AudioEncoder(AVCodecID codecId, in AudioFormat format, int bitrate = 0)
+        : this(MediaCodec.GetEncoder(codecId), format, bitrate) { }
 
-    public AudioEncoder(AVCodecID codecId, in AudioFormat format, int bitrate)
-        : this(FindCodecFromId(codecId, enc: true), format, bitrate) { }
-
-    public AudioEncoder(AVCodec* codec, in AudioFormat format, int bitrate)
+    public AudioEncoder(MediaCodec codec, in AudioFormat format, int bitrate = 0)
         : this(AllocContext(codec), takeOwnership: true)
     {
         Format = format;

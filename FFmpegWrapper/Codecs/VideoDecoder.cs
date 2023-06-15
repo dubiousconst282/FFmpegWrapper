@@ -9,9 +9,9 @@ public unsafe class VideoDecoder : MediaDecoder
     public PictureFormat FrameFormat => new(Width, Height, PixelFormat);
 
     public VideoDecoder(AVCodecID codecId)
-        : this(FindCodecFromId(codecId, enc: false)) { }
+        : this(MediaCodec.GetDecoder(codecId)) { }
 
-    public VideoDecoder(AVCodec* codec)
+    public VideoDecoder(MediaCodec codec)
         : this(AllocContext(codec), takeOwnership: true) { }
 
     public VideoDecoder(AVCodecContext* ctx, bool takeOwnership)

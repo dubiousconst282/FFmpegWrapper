@@ -47,13 +47,10 @@ public unsafe class VideoEncoder : MediaEncoder
         set => SetOrThrowIfOpen(ref _ctx->compression_level, value);
     }
 
-    public ReadOnlySpan<AVPixelFormat> SupportedPixelFormats
-        => Helpers.GetSpanFromSentinelTerminatedPtr(_ctx->codec->pix_fmts, PixelFormats.None);
+    public VideoEncoder(AVCodecID codecId, in PictureFormat format, double frameRate, int bitrate = 0)
+        : this(MediaCodec.GetEncoder(codecId), format, frameRate, bitrate) { }
 
-    public VideoEncoder(AVCodecID codecId, in PictureFormat format, double frameRate, int bitrate)
-        : this(FindCodecFromId(codecId, enc: true), format, frameRate, bitrate) { }
-
-    public VideoEncoder(AVCodec* codec, in PictureFormat format, double frameRate, int bitrate)
+    public VideoEncoder(MediaCodec codec, in PictureFormat format, double frameRate, int bitrate = 0)
         : this(AllocContext(codec), takeOwnership: true)
     {
         FrameFormat = format;

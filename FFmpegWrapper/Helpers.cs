@@ -41,8 +41,11 @@ internal static unsafe class Helpers
         return new ReadOnlySpan<T>(ptr, len);
     }
 
-    public static string PtrToStringUTF8(byte* ptr)
+    public static string? PtrToStringUTF8(byte* ptr)
     {
+        if (ptr == null) {
+            return null;
+        }
         var span = new Span<byte>(ptr, int.MaxValue);
         int length = span.IndexOf((byte)0);
         return Encoding.UTF8.GetString(ptr, length);

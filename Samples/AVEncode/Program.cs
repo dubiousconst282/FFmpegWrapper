@@ -9,12 +9,14 @@ if (args.Length < 1) {
 using var muxer = new MediaMuxer(args[0]);
 
 double frameRate = 24.0;
-
 using var videoFrame = new VideoFrame(1280, 720, PixelFormats.YUV420P);
-using var videoEnc = new VideoEncoder(CodecIds.H264, videoFrame.Format, frameRate, bitrate: 900_000);
-videoEnc.SetOption("preset", "faster"); //libx264 specific
+using var videoEnc = new VideoEncoder(MediaCodec.GetEncoder("libx264"), videoFrame.Format, frameRate);
 
-//Note that some audio encoders require specific frame formats, requiring use of `SwResampler` (see AVTranscode sample).
+//Set libx264 specific options
+videoEnc.SetOption("crf", "24");
+videoEnc.SetOption("preset", "faster");
+
+//Note that some audio encoders require specific frame formats, necessitating use of `SwResampler` (see AVTranscode sample).
 //There may also be frame size constraints, see `AudioEncoder.FrameSize`.
 using var audioFrame = new AudioFrame(SampleFormats.FloatPlanar, 48000, 2, 1024) { PresentationTimestamp = 0 };
 using var audioEnc = new AudioEncoder(CodecIds.AAC, audioFrame.Format, bitrate: 128_000);
@@ -28,7 +30,7 @@ if (args[0].EndsWith(".mp4")) {
 }
 muxer.Open(muxerOpts); //Open encoders and write header
 
-int numFrames = (int)(frameRate * 10 + 1); //encode 10s of video
+int numFrames = (int)Math.Round(frameRate * 10); //Encode 10s of video
 for (int i = 0; i < numFrames; i++) {
     videoFrame.PresentationTimestamp = videoEnc.GetFramePts(frameNumber: i);
     GenerateFrame(videoFrame);
@@ -41,7 +43,7 @@ for (int i = 0; i < numFrames; i++) {
         audioFrame.PresentationTimestamp += audioFrame.Count;
     }
 }
-//Flush delayed frames in the encoder
+//Flush frames delayed in the encoder
 muxer.EncodeAndWrite(videoStream, videoEnc, null);
 
 static void GenerateFrame(VideoFrame frame)
