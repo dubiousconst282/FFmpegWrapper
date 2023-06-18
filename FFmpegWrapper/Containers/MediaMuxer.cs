@@ -19,6 +19,7 @@ public unsafe class MediaMuxer : FFObject
 
     public IReadOnlyList<MediaStream> Streams => _streams.Select(s => s.Stream).ToList();
 
+    /// <inheritdoc cref="AVFormatContext.metadata" />
     public MediaDictionary Metadata => new(&Handle->metadata);
 
     public bool IsOpen { get; private set; } = false;

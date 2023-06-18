@@ -18,8 +18,10 @@ public unsafe class MediaDemuxer : FFObject
 
     public TimeSpan? Duration => Helpers.GetTimeSpan(_ctx->duration, new() { num = 1, den = ffmpeg.AV_TIME_BASE });
 
+    /// <summary> An array of all streams in the file. </summary>
     public ImmutableArray<MediaStream> Streams { get; }
 
+    /// <inheritdoc cref="AVFormatContext.metadata" />
     public MediaDictionary Metadata => new(&Handle->metadata);
 
     public bool CanSeek => _ctx->pb->seek.Pointer != IntPtr.Zero;
@@ -62,6 +64,12 @@ public unsafe class MediaDemuxer : FFObject
         return index < 0 ? null : Streams[index];
     }
 
+    /// <summary> Creates a decoder for the given audio or video stream. </summary>
+    /// <param name="open">
+    /// True to call <see cref="CodecBase.Open()" /> before returning the decoder.
+    /// Should be set to false if extra setup (e.g. hardware acceleration) is needed before opening.
+    /// </param>
+    /// <returns></returns>
     public MediaDecoder CreateStreamDecoder(MediaStream stream, bool open = true)
     {
         if (Streams[stream.Index] != stream) {

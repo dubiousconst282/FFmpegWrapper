@@ -16,17 +16,28 @@ public unsafe abstract class CodecBase : FFObject
 
     public MediaCodec Codec => new(_ctx->codec);
 
+    /// <inheritdoc cref="AVCodecContext.time_base"/>
     public AVRational TimeBase {
         get => _ctx->time_base;
         set => SetOrThrowIfOpen(ref _ctx->time_base, value);
     }
+    /// <inheritdoc cref="AVCodecContext.framerate"/>
     public AVRational FrameRate {
         get => _ctx->framerate;
         set => SetOrThrowIfOpen(ref _ctx->framerate, value);
     }
 
-    public Span<byte> ExtraData {
-        get => GetExtraData();
+    /// <summary>
+    /// Some codecs need / can use extradata like Huffman tables. <br/>
+    /// MJPEG: Huffman tables <br/>
+    /// rv10: additional flags <br/>
+    /// MPEG-4: global headers (they can be in the bitstream or here) <para/>
+    /// 
+    /// - encoding: Set by libavcodec.<br/>
+    /// - decoding: Set by wrapper/user.
+    /// </summary>
+    public ReadOnlySpan<byte> ExtraData {
+        get => new(_ctx->extradata, _ctx->extradata_size);
         set => SetExtraData(value);
     }
 
@@ -107,11 +118,7 @@ public unsafe abstract class CodecBase : FFObject
         ffmpeg.avcodec_flush_buffers(Handle);
     }
 
-    private Span<byte> GetExtraData()
-    {
-        return new Span<byte>(_ctx->extradata, _ctx->extradata_size);
-    }
-    private void SetExtraData(Span<byte> buf)
+    private void SetExtraData(ReadOnlySpan<byte> buf)
     {
         ThrowIfOpen();
 

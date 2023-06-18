@@ -24,6 +24,8 @@ public unsafe class HardwareDevice : FFObject
         _ctx = deviceCtx;
     }
 
+    /// <summary> Open a device of the specified type and create a context for it. </summary>
+    /// <returns> The created device context or null on failure. </returns>
     public static HardwareDevice? Create(AVHWDeviceType type)
     {
         AVBufferRef* ctx;

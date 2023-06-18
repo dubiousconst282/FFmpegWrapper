@@ -24,10 +24,12 @@ public unsafe class VideoEncoder : MediaEncoder
         }
     }
 
+    /// <inheritdoc cref="AVCodecContext.gop_size"/>
     public int GopSize {
         get => _ctx->gop_size;
         set => SetOrThrowIfOpen(ref _ctx->gop_size, value);
     }
+    /// <inheritdoc cref="AVCodecContext.max_b_frames"/>
     public int MaxBFrames {
         get => _ctx->max_b_frames;
         set => SetOrThrowIfOpen(ref _ctx->max_b_frames, value);

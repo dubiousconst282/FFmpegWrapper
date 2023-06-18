@@ -10,6 +10,7 @@ public abstract unsafe class MediaEncoder : CodecBase
     public MediaEncoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
         : base(ctx, expectedType, takeOwnership) { }
 
+    /// <summary> Sets a codec specific option. If it doesn't exist, throws <see cref="InvalidOperationException"/>. </summary>
     public void SetOption(string name, string value)
     {
         ffmpeg.av_opt_set(Handle->priv_data, name, value, 0).CheckError();
@@ -22,7 +23,7 @@ public abstract unsafe class MediaEncoder : CodecBase
         if (result is not (LavResult.Success or LavResult.TryAgain or LavResult.EndOfFile)) {
             result.ThrowIfError("Could not encode packet");
         }
-        return result == 0;
+        return result >= 0;
     }
     public bool SendFrame(MediaFrame? frame)
     {
@@ -31,10 +32,10 @@ public abstract unsafe class MediaEncoder : CodecBase
         if (result != LavResult.Success && !(result == LavResult.EndOfFile && frame == null)) {
             result.ThrowIfError("Could not encode frame");
         }
-        return result == 0;
+        return result >= 0;
     }
 
-    /// <summary> Returns the correct <see cref="MediaFrame.PresentationTimestamp"/> for the given timestamp, in respect to <see cref="CodecBase.TimeBase"/>. </summary>
+    /// <summary> Returns a presentation timestamp (PTS) in terms of <see cref="CodecBase.TimeBase"/> for the given timespan. </summary>
     public long GetFramePts(TimeSpan time)
     {
         return GetFramePts(time.Ticks, new() { num = 1, den = (int)TimeSpan.TicksPerSecond });

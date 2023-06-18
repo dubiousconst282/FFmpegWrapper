@@ -11,20 +11,20 @@ public unsafe readonly struct AudioFormat
     public int BytesPerSample => ffmpeg.av_get_bytes_per_sample(SampleFormat);
     public bool IsPlanar => ffmpeg.av_sample_fmt_is_planar(SampleFormat) != 0;
 
-    public AudioFormat(AVSampleFormat fmt, int sampleRate, int numChannels)
+    public AudioFormat(AVSampleFormat sampleFmt, int sampleRate, int numChannels)
     {
-        SampleFormat = fmt;
+        SampleFormat = sampleFmt;
         SampleRate = sampleRate;
 
         AVChannelLayout tempLayout;
         ffmpeg.av_channel_layout_default(&tempLayout, numChannels);
         Layout = tempLayout;
     }
-    public AudioFormat(AVSampleFormat fmt, int sampleRate, AVChannelLayout layout)
+    public AudioFormat(AVSampleFormat sampleFmt, int sampleRate, AVChannelLayout channelLayout)
     {
-        SampleFormat = fmt;
+        SampleFormat = sampleFmt;
         SampleRate = sampleRate;
-        Layout = layout;
+        Layout = channelLayout;
     }
     public AudioFormat(AVCodecContext* ctx)
     {
@@ -48,6 +48,10 @@ public unsafe readonly struct AudioFormat
     public override string ToString()
     {
         var fmt = SampleFormat.ToString().Substring("AV_SAMPLE_FMT_".Length);
-        return $"{NumChannels}ch {fmt}, {SampleRate / 1000.0:0.0}KHz";
+
+        var buffer = stackalloc byte[128];
+        var layout = Layout;
+        ffmpeg.av_channel_layout_describe(&layout, buffer, 128);
+        return $"{SampleRate} Hz, {Helpers.PtrToStringUTF8(buffer)}, {fmt}";
     }
 }

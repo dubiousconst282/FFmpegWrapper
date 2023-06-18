@@ -46,6 +46,10 @@ public unsafe class MediaPacket : FFObject
     public MediaPacket()
     {
         _pkt = ffmpeg.av_packet_alloc();
+
+        if (_pkt == null) {
+            throw new OutOfMemoryException();
+        }
     }
 
     /// <inheritdoc cref="ffmpeg.av_packet_rescale_ts(AVPacket*, AVRational, AVRational)"/>

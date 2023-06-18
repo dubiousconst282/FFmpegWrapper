@@ -12,7 +12,10 @@ public unsafe abstract class MediaFrame : FFObject
         }
     }
 
+    /// <inheritdoc cref="AVFrame.best_effort_timestamp" />
     public long? BestEffortTimestamp => Helpers.GetPTS(_frame->best_effort_timestamp);
+
+    /// <inheritdoc cref="AVFrame.pts" />
     public long? PresentationTimestamp {
         get => Helpers.GetPTS(_frame->pts);
         set => Helpers.SetPTS(ref _frame->pts, value);

@@ -61,12 +61,13 @@ public abstract unsafe class IOContext : FFObject
     /// <summary> Sets the position of the underlying stream. </summary>
     protected abstract long Seek(long offset, SeekOrigin origin);
 
+    /// <summary> Returns the number of bytes in the underlying stream. </summary>
     protected virtual long? GetLength() => null;
 
     protected override void Free()
     {
         if (_ctx != null) {
-            ffmpeg.av_free(_ctx->buffer);
+            ffmpeg.av_freep(&_ctx->buffer);
             fixed (AVIOContext** c = &_ctx) ffmpeg.avio_context_free(c);
         }
     }

@@ -21,6 +21,6 @@ public abstract unsafe class MediaDecoder : CodecBase
         if (result is not (LavResult.Success or LavResult.TryAgain or LavResult.EndOfFile)) {
             result.ThrowIfError("Could not decode frame");
         }
-        return result == 0;
+        return result >= 0;
     }
 }
