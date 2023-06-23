@@ -16,8 +16,8 @@ using var videoEnc = new VideoEncoder(MediaCodec.GetEncoder("libx264"), videoFra
 videoEnc.SetOption("crf", "24");
 videoEnc.SetOption("preset", "faster");
 
-//Note that some audio encoders require specific frame formats, necessitating use of `SwResampler` (see AVTranscode sample).
-//There may also be frame size constraints, see `AudioEncoder.FrameSize`.
+//Note that some audio encoders support only a specific set of frame formats and sizes, 
+//requiring use of `SwResampler` as done in the AVTranscode sample.
 using var audioFrame = new AudioFrame(SampleFormats.FloatPlanar, 48000, 2, 1024) { PresentationTimestamp = 0 };
 using var audioEnc = new AudioEncoder(CodecIds.AAC, audioFrame.Format, bitrate: 128_000);
 
@@ -34,7 +34,7 @@ int numFrames = (int)(frameRate * 10); //Encode 10s of video
 for (int i = 0; i < numFrames; i++) {
     videoFrame.PresentationTimestamp = videoEnc.GetFramePts(frameNumber: i);
     GenerateFrame(videoFrame);
-    muxer.EncodeAndWrite(videoStream, videoEnc, videoFrame);
+    muxer.EncodeAndWrite(videoStream, videoEnc, videoFrame); //All in one: send_frame(), receive_packet(), interleaved_write()
 
     long samplePos = (long)(i / frameRate * audioEnc.SampleRate);
     while (audioFrame.PresentationTimestamp < samplePos) {
@@ -45,6 +45,7 @@ for (int i = 0; i < numFrames; i++) {
 }
 //Flush frames delayed in the encoder
 muxer.EncodeAndWrite(videoStream, videoEnc, null);
+muxer.EncodeAndWrite(audioStream, audioEnc, null);
 
 static void GenerateFrame(VideoFrame frame)
 {

@@ -32,7 +32,7 @@ public unsafe class VideoFrame : MediaFrame
     public VideoFrame(PictureFormat fmt, bool clearToBlack = true)
         : this(fmt.Width, fmt.Height, fmt.PixelFormat, clearToBlack) { }
 
-    public VideoFrame(int width, int height, AVPixelFormat fmt = AVPixelFormat.AV_PIX_FMT_RGBA, bool clearToBlack = true)
+    public VideoFrame(int width, int height, AVPixelFormat fmt, bool clearToBlack = true)
     {
         if (width <= 0 || height <= 0) {
             throw new ArgumentException("Invalid frame dimensions.");
@@ -122,10 +122,13 @@ public unsafe class VideoFrame : MediaFrame
         static int CeilShr(int x, int s) => (x + (1 << s) - 1) >> s;
     }
 
-    /// <summary> Creates a hardware frame memory mapping. </summary>
-    public VideoFrame Map(HardwareFrameMappingFlags flags)
+    /// <summary> Attempts to create a hardware frame memory mapping. Returns null if the backing device does not support frame mappings. </summary>
+    public VideoFrame? Map(HardwareFrameMappingFlags flags)
     {
         ThrowIfDisposed();
+        if (!IsHardwareFrame) {
+            throw new InvalidOperationException("Cannot create mapping of non-hardware frame.");
+        }
 
         var mapping = ffmpeg.av_frame_alloc();
         int result = ffmpeg.av_hwframe_map(mapping, _frame, (int)flags);
@@ -136,7 +139,7 @@ public unsafe class VideoFrame : MediaFrame
             return new VideoFrame(mapping, takeOwnership: true);
         }
         ffmpeg.av_frame_free(&mapping);
-        throw result.ThrowError("Failed to create hardware frame mapping");
+        return null;
     }
     /// <summary> Copy data from this frame to <paramref name="dest"/>. At least one of <see langword="this"/> or <paramref name="dest"/> must be a hardware frame. </summary>
     public void TransferTo(VideoFrame dest)
@@ -149,6 +152,10 @@ public unsafe class VideoFrame : MediaFrame
     public AVPixelFormat[] GetHardwareTransferFormats(HardwareFrameTransferDirection direction)
     {
         ThrowIfDisposed();
+        if (!IsHardwareFrame) {
+            throw new InvalidOperationException("Cannot query transfer formats for non-hardware frame.");
+        }
+
         AVPixelFormat* pFormats;
 
         if (ffmpeg.av_hwframe_transfer_get_formats(_frame->hw_frames_ctx, (AVHWFrameTransferDirection)direction, &pFormats, 0) < 0) {
@@ -176,7 +183,6 @@ public unsafe class VideoFrame : MediaFrame
     }
 
     /// <summary> Saves this frame to the specified file. The format will be choosen based on the file extension. (Can be either JPG or PNG) </summary>
-    /// <remarks> This is an unoptimized debug method. Production use is not recommended. </remarks>
     /// <param name="quality">JPEG: Quantization factor. PNG: ZLib compression level. 0-100</param>
     public void Save(string filename, int quality = 90, int outWidth = 0, int outHeight = 0)
     {

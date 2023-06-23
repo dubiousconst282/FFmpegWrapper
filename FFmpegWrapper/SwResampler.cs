@@ -14,9 +14,7 @@ public unsafe class SwResampler : FFObject
     public AudioFormat InputFormat { get; }
     public AudioFormat OutputFormat { get; }
 
-    /// <summary>
-    /// Gets the number of dst buffered samples
-    /// </summary>
+    /// <summary> Gets an estimated number of buffered output samples. </summary>
     public int BufferedSamples => (int)ffmpeg.swr_get_delay(_ctx, OutputFormat.SampleRate);
 
     public SwResampler(AudioFormat inFmt, AudioFormat outFmt)
@@ -39,7 +37,7 @@ public unsafe class SwResampler : FFObject
         OutputFormat = outFmt;
     }
 
-    /// <summary> Converts interleaved audio samples from <paramref name="src"/> to <paramref name="dst"/>. </summary>
+    /// <summary> Convert interleaved audio samples from <paramref name="src"/> and writes the result to <paramref name="dst"/>. </summary>
     /// <remarks> <paramref name="src"/> can be set to <see langword="default"/> to flush the last few samples out at the end. </remarks>
     /// <returns> The number of samples written to the dst buffer. </returns>
     public int Convert<TSrc, TDst>(ReadOnlySpan<TSrc> src, Span<TDst> dst)
@@ -64,7 +62,7 @@ public unsafe class SwResampler : FFObject
         }
     }
 
-    /// <summary> Converts audio data from <paramref name="src"/> to <paramref name="dst"/>. </summary>
+    /// <summary> Convert audio data from <paramref name="src"/> and writes the result to <paramref name="dst"/>. </summary>
     /// <remarks> 
     /// <paramref name="src"/> can be set to <see langword="null"/> to flush the last few samples out at the end. <br/>
     /// If more input is provided than output space, then the input will be buffered.
@@ -85,66 +83,71 @@ public unsafe class SwResampler : FFObject
         return ffmpeg.swr_convert_frame(Handle, dst.Handle, src == null ? null : src.Handle).CheckError();
     }
 
-    private AudioFrame? _currentDest; //dest frame for stateful buffered BeginConvert()/Drain(). 
     private bool _flushing;
 
     /// <summary>
-    /// Converts audio frames from <paramref name="source"/> into an internal buffer, and binds <paramref name="dest"/> as the destination buffer.
+    /// Converts audio samples from <paramref name="frame"/> to the internal resampler buffer. The converted samples can be retrieved using <see cref="ReceiveFrame(AudioFrame)"/>.
     /// <br/>
-    /// Converted frames are acquired by calling <see cref="Drain()"/> in a loop, where each successful call indicates that <paramref name="dest"/> 
-    /// is filled with exactly <see cref="AudioFrame.Capacity"/> samples. Afterwards it will return false and dest will only be partially filled.
-    /// <br/>
-    /// Setting <paramref name="source"/> to null will begin flushing, in which case Drain() may return true with partially filled frames on the last time.
+    /// Setting <paramref name="frame"/> to null will transition the resampler state to begin flushing, which may cause ReceiveFrame() to return true with partially filled frames on the last time.
     /// </summary>
-    /// <exception cref="InvalidOperationException">If there's an activ</exception>
-    public void BeginConvert(AudioFrame? source, AudioFrame dest)
+    public void SendFrame(AudioFrame? frame)
     {
-        if (_currentDest != null) {
-            throw new InvalidOperationException("Cannot call BeginConvert() again until the current buffer is fully drained.");
-        }
-        _currentDest = dest;
         byte** inputData = null;
         int inputLen = 0;
 
-        if (source != null) {
-            inputData = source.Data;
-            inputLen = source.Count;
+        if (frame != null) {
+            inputData = frame.Data;
+            inputLen = frame.Count;
         } else {
             _flushing = true;
         }
         Convert(inputData, inputLen, null, 0);
-        //TODO: prevent a copy by converting the first few samples directly to `dest`
     }
 
-    /// <summary> Drains converted samples to the current dest frame. See <see cref="BeginConvert(AudioFrame?, AudioFrame)"/>. </summary>
-    public bool Drain()
+    /// <summary>
+    /// Retrieves converted samples from the internal buffer and appends them to <paramref name="frame"/>. <br/>
+    /// If the frame is already full when this method is called, it will be reset before being filled.
+    /// </summary>
+    /// <returns>
+    /// True if the frame was filled up to its <see cref="AudioFrame.Capacity"/>, or if the resampler 
+    /// has finished flushing out the final samples.  <br/>
+    /// False if the frame was only partially filled and more input data must be feed via <see cref="SendFrame(AudioFrame?)"/>.
+    /// </returns>
+    public bool ReceiveFrame(AudioFrame frame)
     {
-        var dest = _currentDest ?? throw new InvalidOperationException($"No bound destination frame. Try calling {nameof(BeginConvert)}() first.");
-
-        if (dest.Count >= dest.Capacity) {
-            dest.Count = 0;
+        if (frame.Count >= frame.Capacity) {
+            frame.Count = 0;
         }
-        //Convert buffered frames to the current dest, starting at the frame count
-        int remainingCount = dest.Capacity - dest.Count;
-        int outOffset = dest.Count * dest.Format.BytesPerSample * (dest.IsPlanar ? 1 : dest.NumChannels);
-        int numPlanes = dest.IsPlanar ? dest.NumChannels : 1;
-        byte** outData = stackalloc byte*[numPlanes];
+        //Calculate remaining space and starting pointers
+        int count = frame.Capacity - frame.Count;
+        int offset = frame.Count * frame.Format.BytesPerSample * (frame.IsPlanar ? 1 : frame.NumChannels);
+        int numPlanes = frame.IsPlanar ? frame.NumChannels : 1;
+        byte** data = stackalloc byte*[numPlanes];
 
         for (int i = 0; i < numPlanes; i++) {
-            outData[i] = &dest.Data[i][outOffset];
+            data[i] = &frame.Data[i][offset];
         }
-        var inData = _flushing ? null : outData; //input must be non-null to prevent a flush.
-        int actualOut = Convert(inData, 0, outData, remainingCount);
+        var inData = _flushing ? null : data; //input ptr must be non-null to prevent transitioning the resampler to flush state.
+        int actualOut = Convert(inData, 0, data, count);
 
-        dest.Count += actualOut;
+        frame.Count += actualOut;
+        return frame.Count >= frame.Capacity;
+    }
 
-        if (dest.Count != dest.Capacity) {
-            //No more buffered data, data must be feed via BeginConvert() again.
-            _currentDest = null;
-            _flushing = false;
-            return false;
+    /// <summary> Retrieves converted samples from the internal buffer. </summary>
+    /// <returns> The number of samples written to <paramref name="buffer"/>. </returns>
+    public int ReceiveFrame<T>(Span<T> buffer) where T : unmanaged
+    {
+        if (OutputFormat.IsPlanar) {
+            throw new InvalidOperationException("This overload does not support planar output formats.");
         }
-        return true;
+        fixed (T* pBuffer = buffer) {
+            byte** outData = stackalloc byte*[1] { (byte*)pBuffer };
+            int count = buffer.Length * sizeof(T) / (OutputFormat.NumChannels * OutputFormat.BytesPerSample);
+
+            var inData = _flushing ? null : outData; //input ptr must be non-null to prevent transitioning the resampler to flush state.
+            return Convert(inData, 0, outData, count);
+        }
     }
 
     /// <summary>
@@ -159,6 +162,14 @@ public unsafe class SwResampler : FFObject
     {
         return ffmpeg.swr_get_out_samples(_ctx, inputSampleCount);
     }
+
+    /// <summary> Drops the specified number of output samples. </summary>
+    public void DropOutputSamples(int count)
+    {
+        ffmpeg.swr_drop_output(_ctx, count).CheckError();
+    }
+
+    //TODO: expose swr_next_pts() and whatever else
 
     protected override void Free()
     {

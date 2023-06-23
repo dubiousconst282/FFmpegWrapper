@@ -1,23 +1,23 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29230.47
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFmpegWrapper", "FFmpegWrapper\FFmpegWrapper.csproj", "{9578B111-CD3D-44BA-8336-699884530A0C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{3D89B1B5-F184-4451-86F6-A05A52E261E4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThumbExtractor", "Samples\ThumbExtractor\ThumbExtractor.csproj", "{E0ACE097-C8AF-4BA3-B239-F0510D3AB313}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FrameExtractor", "Samples\FrameExtractor\FrameExtractor.csproj", "{E0ACE097-C8AF-4BA3-B239-F0510D3AB313}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AVEncode", "Samples\AVEncode\AVEncode.csproj", "{2F677057-D38E-40A8-9F1E-14131A68902F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AVEncode", "Samples\AVEncode\AVEncode.csproj", "{2F677057-D38E-40A8-9F1E-14131A68902F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkiaInterop", "Samples\SkiaInterop\SkiaInterop.csproj", "{117760C4-FF4D-4C30-8007-31FB9B787E2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaInterop", "Samples\SkiaInterop\SkiaInterop.csproj", "{117760C4-FF4D-4C30-8007-31FB9B787E2A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HWDecode", "Samples\HWDecode\HWDecode.csproj", "{C0CED4BD-B87D-40BA-8641-9FD393755D9B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWDecode", "Samples\HWDecode\HWDecode.csproj", "{C0CED4BD-B87D-40BA-8641-9FD393755D9B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HWEncode", "Samples\HWEncode\HWEncode.csproj", "{5017249E-A674-4958-9976-C9456E9A6C73}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWEncode", "Samples\HWEncode\HWEncode.csproj", "{5017249E-A674-4958-9976-C9456E9A6C73}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AVTranscode", "Samples\AVTranscode\AVTranscode.csproj", "{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AVTranscode", "Samples\AVTranscode\AVTranscode.csproj", "{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,6 +54,9 @@ Global
 		{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E0ACE097-C8AF-4BA3-B239-F0510D3AB313} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 		{2F677057-D38E-40A8-9F1E-14131A68902F} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
@@ -61,5 +64,8 @@ Global
 		{C0CED4BD-B87D-40BA-8641-9FD393755D9B} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 		{5017249E-A674-4958-9976-C9456E9A6C73} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 		{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FBB6A4C7-BCD6-45BD-A659-7BADD859E7D4}
 	EndGlobalSection
 EndGlobal

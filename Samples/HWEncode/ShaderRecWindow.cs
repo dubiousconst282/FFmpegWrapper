@@ -8,7 +8,9 @@ using OpenTK.Windowing.Desktop;
 using FFmpeg.AutoGen;
 using System.Diagnostics;
 
-public unsafe class PlaybackWindow : GameWindow
+//Recording OpenGL framebuffer using hardware encoder.
+//This uses multiple Pixel Buffer Objects to enable asynchronous framebuffer downloads and reduce delay.
+public unsafe class ShaderRecWindow : GameWindow
 {
     private MediaMuxer _muxer;
     private MediaStream _stream;
@@ -24,7 +26,7 @@ public unsafe class PlaybackWindow : GameWindow
     private int _frameNo;
     const int _width = 1280, _height = 720;
 
-    public PlaybackWindow(string outVideoPath)
+    public ShaderRecWindow(string outVideoPath)
         : base(
             new GameWindowSettings(),
             new NativeWindowSettings() {
@@ -40,10 +42,10 @@ public unsafe class PlaybackWindow : GameWindow
         using var device = VideoEncoder.CreateCompatibleHardwareDevice(CodecIds.H264, format, out var hwConfig)
             ?? throw new InvalidOperationException("No compatible hardware encoder for the given settings");
 
-        //These renders look terribly blocky and artifacty even at relatively high bitrates for some reason (even with libx264).
-        _encoder = new VideoEncoder(hwConfig, format, frameRate: 60, bitrate: 12000_000, device, null);
+        _encoder = new VideoEncoder(hwConfig, format, frameRate: 60, device);
 
         if (_encoder.Codec.Name == "h264_qsv") {
+            _encoder.SetGlobalOption("global_quality", "28");
             _encoder.SetOption("preset", "veryslow");
             _encoder.SetOption("look_ahead", "1");
         }
@@ -54,22 +56,12 @@ public unsafe class PlaybackWindow : GameWindow
 
         _rgbFrame = new VideoFrame(format.Width, format.Height, PixelFormats.BGRA);
         _frame = new VideoFrame(format);
-        _scaler = new SwScaler(_rgbFrame.Format, format); //TODO: do RGB->YUV conversion in shader (actually QSV accepts BGRA)
+        _scaler = new SwScaler(_rgbFrame.Format, format);
     }
 
     protected override void OnLoad()
     {
         base.OnLoad();
-
-        GL.DebugMessageCallback((source, type, id, severity, length, ptext, _) => {
-            var severityStr = severity.ToString().Substring("DebugSeverity".Length).ToUpper();
-            var sourceStr = source.ToString().Substring("DebugSource".Length);
-            var typeStr = type.ToString().Substring("DebugType".Length);
-            var text = Encoding.UTF8.GetString((byte*)ptext, length);
-
-            Console.WriteLine($"GL-{sourceStr}-{typeStr}: [{severityStr}] {text}");
-        }, 0);
-        GL.Enable(EnableCap.DebugOutput);
 
         string shaderBasePath = AppContext.BaseDirectory + "shaders/";
 
@@ -85,7 +77,6 @@ public unsafe class PlaybackWindow : GameWindow
         }
 
         _format = VertexFormat.CreateEmpty();
-
         _emptyVbo = new BufferObject(16, BufferStorageFlags.None);
 
         for (int i = 0; i < _pbos.Length; i++) {
@@ -132,32 +123,28 @@ public unsafe class PlaybackWindow : GameWindow
     }
     private void EncodeFrame()
     {
-        var pbo = _pbos[(_frameNo - _pbos.Length + 1) % _pbos.Length];
-
         long start = Stopwatch.GetTimestamp();
 
-        //OpenGL uses bottom-left as the pixel origin.
-        //We could flip Y coords in the shader, but that'd move the issue to the
-        //window framebuffer.  Just do it in the obvious way here.
+        var pbo = _pbos[(_frameNo - _pbos.Length + 1) % _pbos.Length];
+        var mapping = pbo.Map<byte>(0, (int)pbo.Size, BufferAccessMask.MapReadBit);
+
+        //OpenGL uses bottom-left as the pixel origin, so we'll flip the Y coords here.
         //
         //Note that giving the mapped memory directly to swscaler is _super_ slow.
         //It's probably doing lots of accesses for interpolation and planar chroma
         //packing or something like that.
-        var mapping = pbo.Map<byte>(0, (int)pbo.Size, BufferAccessMask.MapReadBit);
-
         for (int y = 0; y < _height; y++) {
             var row = _rgbFrame.GetRowSpan<byte>(_height - 1 - y);
             mapping.Slice(y * row.Length, row.Length).CopyTo(row);
         }
         pbo.Unmap();
-        Console.WriteLine("Read " + Stopwatch.GetElapsedTime(start).TotalMilliseconds + "ms");
 
-        start = Stopwatch.GetTimestamp();
         _scaler.Convert(_rgbFrame, _frame);
-        Console.WriteLine("Convert " + Stopwatch.GetElapsedTime(start).TotalMilliseconds + "ms");
 
         _frame.PresentationTimestamp = _encoder.GetFramePts(_frameNo);
         _muxer.EncodeAndWrite(_stream, _encoder, _frame);
+
+        Title = $"EncodeFrame: {Stopwatch.GetElapsedTime(start).TotalMilliseconds:0.0}ms";
     }
 
     protected override void OnUnload()

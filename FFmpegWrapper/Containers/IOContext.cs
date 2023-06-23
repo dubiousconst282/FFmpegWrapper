@@ -10,10 +10,10 @@ public abstract unsafe class IOContext : FFObject
         }
     }
 
-    public bool CanRead { get; }
-    public bool CanWrite { get; }
-    public bool CanSeek => _ctx->seekable != 0;
-
+    public bool CanRead => _readFn != null;
+    public bool CanWrite => _writeFn != null;
+    public bool CanSeek => _seekFn != null;
+    
     //Keep lambda refs to prevent them from being GC collected
     private avio_alloc_context_read_packet? _readFn;
     private avio_alloc_context_write_packet? _writeFn;

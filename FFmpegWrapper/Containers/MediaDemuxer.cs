@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace FFmpeg.Wrapper;
 
@@ -101,10 +101,10 @@ public unsafe class MediaDemuxer : FFObject
         return result == 0;
     }
 
-    /// <summary> Seeks the demuxer to some keyframe near but not later than <paramref name="timestamp"/>. </summary>
-    /// <remarks> If this method returns true, all open stream decoders should be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
+    /// <summary> Seeks the demuxer to somewhere near <paramref name="timestamp"/>, according to <paramref name="options"/>. </summary>
+    /// <remarks> If this method returns true, all open stream decoders must be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
     /// <exception cref="InvalidOperationException">If the underlying IO context doesn't support seeks.</exception>
-    public bool Seek(TimeSpan timestamp)
+    public bool Seek(TimeSpan timestamp, SeekOptions options)
     {
         ThrowIfDisposed();
 
@@ -112,7 +112,7 @@ public unsafe class MediaDemuxer : FFObject
             throw new InvalidOperationException("Backing IO context is not seekable.");
         }
         long ts = ffmpeg.av_rescale(timestamp.Ticks, ffmpeg.AV_TIME_BASE, TimeSpan.TicksPerSecond);
-        return ffmpeg.av_seek_frame(_ctx, -1, ts, ffmpeg.AVSEEK_FLAG_BACKWARD) == 0;
+        return ffmpeg.av_seek_frame(_ctx, -1, ts, (int)options) == 0;
     }
 
     protected override void Free()
@@ -130,4 +130,16 @@ public unsafe class MediaDemuxer : FFObject
             throw new ObjectDisposedException(nameof(MediaDemuxer));
         }
     }
+}
+[Flags]
+public enum SeekOptions
+{
+    /// <summary> Seek to the nearest keyframe after or at the requested timestamp. </summary>
+    Forward = 0,
+
+    /// <summary> Seek to the nearest keyframe before or at the requested timestamp. </summary>
+    Backward = ffmpeg.AVSEEK_FLAG_BACKWARD,
+
+    /// <summary> Allow seeking to non-keyframes. This may cause decoders to fail or output corrupt frames. </summary>
+    AllowNonKeyFrames = ffmpeg.AVSEEK_FLAG_ANY,
 }

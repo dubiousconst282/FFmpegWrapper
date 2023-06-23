@@ -129,9 +129,9 @@ class AudioTranscoder : MediaTranscoder
             PresentationTimestamp = 0
         };
 
-        _resampler.BeginConvert((AudioFrame?)frame, _outFrame);
+        _resampler.SendFrame((AudioFrame?)frame);
 
-        while (_resampler.Drain()) {
+        while (_resampler.ReceiveFrame(_outFrame)) {
             EncodeOutputFrame(_outFrame);
             _outFrame.PresentationTimestamp += _outFrame.Count;
         }

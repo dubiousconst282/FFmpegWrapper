@@ -44,11 +44,6 @@ public unsafe class VideoEncoder : MediaEncoder
         set => SetOrThrowIfOpen(ref _ctx->qmax, value);
     }
 
-    public int CompressionLevel {
-        get => _ctx->compression_level;
-        set => SetOrThrowIfOpen(ref _ctx->compression_level, value);
-    }
-
     public VideoEncoder(AVCodecID codecId, in PictureFormat format, Rational frameRate, int bitrate = 0)
         : this(MediaCodec.GetEncoder(codecId), format, frameRate, bitrate) { }
 
@@ -61,14 +56,14 @@ public unsafe class VideoEncoder : MediaEncoder
         BitRate = bitrate;
     }
 
-    public VideoEncoder(AVCodecContext* ctx, bool takeOwnership)
-        : base(ctx, MediaTypes.Video, takeOwnership) { }
-
     public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, Rational frameRate, HardwareDevice device, HardwareFramePool? framePool = null)
         : this(config.Codec, in format, frameRate)
     {
         SetHardwareContext(config, device, framePool);
     }
+
+    public VideoEncoder(AVCodecContext* ctx, bool takeOwnership)
+        : base(ctx, MediaTypes.Video, takeOwnership) { }
 
     /// <summary> Returns the correct <see cref="MediaFrame.PresentationTimestamp"/> for the given frame number, in respect to <see cref="CodecBase.FrameRate"/> and <see cref="CodecBase.TimeBase"/>. </summary>
     public long GetFramePts(long frameNumber)

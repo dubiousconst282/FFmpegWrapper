@@ -1,7 +1,7 @@
 using FFmpeg.Wrapper;
 
 if (args.Length < 3) {
-    Console.WriteLine("Usage: ThumbExtractor <input video path> <output directory> <num frames>");
+    Console.WriteLine("Usage: FrameExtractor <input video path> <output directory> <num frames>");
     return;
 }
 string inputPath = args[0];
@@ -16,7 +16,7 @@ using var packet = new MediaPacket();
 using var frame = new VideoFrame();
 
 for (int i = 0; i < numFrames; i++) {
-    demuxer.Seek(demuxer.Duration!.Value * ((i + 0.5) / numFrames));
+    demuxer.Seek(demuxer.Duration!.Value * ((i + 0.5) / numFrames), SeekOptions.Forward);
     decoder.Flush(); //Discard any frames decoded before the seek
 
     //Read the file until we can decode a frame from the selected stream

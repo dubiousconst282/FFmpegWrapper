@@ -118,13 +118,15 @@ public unsafe class MediaMuxer : FFObject
         IsOpen = true;
     }
 
+    /// <summary> Muxes the given packet to the output file, ensuring correct interleaving. </summary>
     public void Write(MediaPacket packet)
     {
         ThrowIfNotOpen();
 
-        ffmpeg.av_interleaved_write_frame(_ctx, packet.Handle).CheckError("Failed to write frame");
+        ffmpeg.av_interleaved_write_frame(_ctx, packet.Handle).CheckError("Failed to write packet");
     }
 
+    /// <summary> Encodes the given frame and muxes the resulting packets to the output file. </summary>
     public void EncodeAndWrite(MediaStream stream, MediaEncoder encoder, MediaFrame? frame)
     {
         ThrowIfNotOpen();
@@ -139,7 +141,7 @@ public unsafe class MediaMuxer : FFObject
         while (encoder.ReceivePacket(_tempPacket)) {
             _tempPacket.RescaleTS(encoder.TimeBase, stream.TimeBase);
             _tempPacket.StreamIndex = stream.Index;
-            ffmpeg.av_interleaved_write_frame(_ctx, _tempPacket.Handle);
+            ffmpeg.av_interleaved_write_frame(_ctx, _tempPacket.Handle).CheckError("Failed to write packet");
         }
     }
 
