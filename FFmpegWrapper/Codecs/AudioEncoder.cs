@@ -40,7 +40,7 @@ public unsafe class AudioEncoder : MediaEncoder
     {
         Format = format;
         BitRate = bitrate;
-        TimeBase = new AVRational() { den = format.SampleRate, num = 1 };
+        TimeBase = new Rational(1, format.SampleRate);
     }
 
     public AudioEncoder(AVCodecContext* ctx, bool takeOwnership)

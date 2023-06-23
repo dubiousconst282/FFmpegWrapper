@@ -53,7 +53,7 @@ public unsafe class MediaPacket : FFObject
     }
 
     /// <inheritdoc cref="ffmpeg.av_packet_rescale_ts(AVPacket*, AVRational, AVRational)"/>
-    public void RescaleTS(AVRational sourceBase, AVRational destBase)
+    public void RescaleTS(Rational sourceBase, Rational destBase)
     {
         ffmpeg.av_packet_rescale_ts(Handle, sourceBase, destBase);
     }

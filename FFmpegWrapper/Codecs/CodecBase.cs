@@ -17,12 +17,12 @@ public unsafe abstract class CodecBase : FFObject
     public MediaCodec Codec => new(_ctx->codec);
 
     /// <inheritdoc cref="AVCodecContext.time_base"/>
-    public AVRational TimeBase {
+    public Rational TimeBase {
         get => _ctx->time_base;
         set => SetOrThrowIfOpen(ref _ctx->time_base, value);
     }
     /// <inheritdoc cref="AVCodecContext.framerate"/>
-    public AVRational FrameRate {
+    public Rational FrameRate {
         get => _ctx->framerate;
         set => SetOrThrowIfOpen(ref _ctx->framerate, value);
     }

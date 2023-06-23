@@ -47,7 +47,7 @@ public unsafe readonly struct MediaCodecParameters
     public AVPixelFormat PixelFormat => (AVPixelFormat)Handle->format;
 
     /// <inheritdoc cref="AVCodecParameters.sample_aspect_ratio" />
-    public AVRational PixelAspectRatio => Handle->sample_aspect_ratio;
+    public Rational PixelAspectRatio => Handle->sample_aspect_ratio;
 
     /// <inheritdoc cref="AVCodecParameters.field_order" />
     public AVFieldOrder FieldOrder => Handle->field_order;

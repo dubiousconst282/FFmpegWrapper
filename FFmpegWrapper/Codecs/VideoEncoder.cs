@@ -49,23 +49,23 @@ public unsafe class VideoEncoder : MediaEncoder
         set => SetOrThrowIfOpen(ref _ctx->compression_level, value);
     }
 
-    public VideoEncoder(AVCodecID codecId, in PictureFormat format, double frameRate, int bitrate = 0)
+    public VideoEncoder(AVCodecID codecId, in PictureFormat format, Rational frameRate, int bitrate = 0)
         : this(MediaCodec.GetEncoder(codecId), format, frameRate, bitrate) { }
 
-    public VideoEncoder(MediaCodec codec, in PictureFormat format, double frameRate, int bitrate = 0)
+    public VideoEncoder(MediaCodec codec, in PictureFormat format, Rational frameRate, int bitrate = 0)
         : this(AllocContext(codec), takeOwnership: true)
     {
         FrameFormat = format;
-        FrameRate = ffmpeg.av_d2q(frameRate, 100_000);
-        TimeBase = ffmpeg.av_inv_q(FrameRate);
+        FrameRate = frameRate;
+        TimeBase = frameRate.Reciprocal();
         BitRate = bitrate;
     }
 
     public VideoEncoder(AVCodecContext* ctx, bool takeOwnership)
         : base(ctx, MediaTypes.Video, takeOwnership) { }
 
-    public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, double frameRate, int bitrate, HardwareDevice device, HardwareFramePool? framePool = null)
-        : this(config.Codec, in format, frameRate, bitrate)
+    public VideoEncoder(CodecHardwareConfig config, in PictureFormat format, Rational frameRate, HardwareDevice device, HardwareFramePool? framePool = null)
+        : this(config.Codec, in format, frameRate)
     {
         SetHardwareContext(config, device, framePool);
     }

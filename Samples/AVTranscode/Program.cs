@@ -170,7 +170,7 @@ class VideoTranscoder : MediaTranscoder
         _scaler = new SwScaler(decoder.FrameFormat, format);
         _outFrame = new VideoFrame(format);
 
-        var encoder = new VideoEncoder(CodecIds.H264, format, _inStream.AvgFrameRate, bitrate: 0);
+        var encoder = new VideoEncoder(CodecIds.H264, format, _inStream.AvgFrameRate);
         encoder.SetOption("crf", "22");
         encoder.SetOption("preset", "veryfast");
 

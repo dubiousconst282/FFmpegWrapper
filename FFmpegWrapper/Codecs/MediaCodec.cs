@@ -22,7 +22,14 @@ public unsafe readonly struct MediaCodec
     public byte MaxLowres => Handle->max_lowres;
 
     /// <summary> Span of supported framerates, or empty if any. </summary>
-    public ReadOnlySpan<AVRational> SupportedFramerates => Helpers.GetSpanFromSentinelTerminatedPtr(Handle->supported_framerates, default);
+    public ReadOnlySpan<Rational> SupportedFramerates {
+        get {
+            //Rational equality behaves like float NaNs and will return false for 0/0.
+            //AVRational does not override Equals() so we'll use it here.
+            int len = Helpers.GetSpanFromSentinelTerminatedPtr(Handle->supported_framerates, default).Length;
+            return new ReadOnlySpan<Rational>(Handle->supported_framerates, len);
+        }
+    }
 
     /// <summary> Span of supported pixel formats, or empty if unknown. </summary>
     public ReadOnlySpan<AVPixelFormat> SupportedPixelFormats => Helpers.GetSpanFromSentinelTerminatedPtr(Handle->pix_fmts, (AVPixelFormat)(-1));

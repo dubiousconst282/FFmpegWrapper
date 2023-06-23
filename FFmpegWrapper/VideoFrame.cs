@@ -191,7 +191,7 @@ public unsafe class VideoFrame : MediaFrame
         if (outWidth <= 0) outWidth = Width;
         if (outHeight <= 0) outHeight = Height;
 
-        using var encoder = new VideoEncoder(codec, new PictureFormat(outWidth, outHeight, pixFmt), 1, 10000);
+        using var encoder = new VideoEncoder(codec, new PictureFormat(outWidth, outHeight, pixFmt), Rational.One);
 
         if (jpeg) {
             //1-31

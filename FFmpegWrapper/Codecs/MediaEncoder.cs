@@ -1,4 +1,4 @@
-﻿namespace FFmpeg.Wrapper;
+namespace FFmpeg.Wrapper;
 
 public abstract unsafe class MediaEncoder : CodecBase
 {
@@ -38,10 +38,10 @@ public abstract unsafe class MediaEncoder : CodecBase
     /// <summary> Returns a presentation timestamp (PTS) in terms of <see cref="CodecBase.TimeBase"/> for the given timespan. </summary>
     public long GetFramePts(TimeSpan time)
     {
-        return GetFramePts(time.Ticks, new() { num = 1, den = (int)TimeSpan.TicksPerSecond });
+        return GetFramePts(time.Ticks, new Rational(1, (int)TimeSpan.TicksPerSecond));
     }
     /// <summary> Rescales the given timestamp to be in terms of <see cref="CodecBase.TimeBase"/>. </summary>
-    public long GetFramePts(long pts, AVRational timeBase)
+    public long GetFramePts(long pts, Rational timeBase)
     {
         return ffmpeg.av_rescale_q(pts, timeBase, TimeBase);
     }

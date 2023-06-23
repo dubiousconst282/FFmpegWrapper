@@ -8,8 +8,7 @@ if (args.Length < 1) {
 }
 using var muxer = new MediaMuxer(args[0]);
 
-double frameRate = 30.0;
-
+int frameRate = 30;
 using var encoder = new VideoEncoder(CodecIds.H264, new PictureFormat(1280, 720, PixelFormats.YUV420P), frameRate, bitrate: 1200_000);
 using var frame = new VideoFrame(encoder.FrameFormat);
 
@@ -20,7 +19,7 @@ using var bitmap = new SKBitmap(frame.Width, frame.Height, SKColorType.Rgba8888,
 using var canvas = new SKCanvas(bitmap);
 using var scaler = new SwScaler(new PictureFormat(bitmap.Width, bitmap.Height, PixelFormats.RGBA), frame.Format, InterpolationMode.Bilinear);
 
-int numFrames = (int)(frameRate * 10 + 1); //encode 10s of video
+int numFrames = (frameRate * 10 + 1); //encode 10s of video
 for (int i = 0; i < numFrames; i++) {
     Console.Write($"Generating frame {i}/{numFrames}\r");
 

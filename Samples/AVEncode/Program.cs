@@ -8,7 +8,7 @@ if (args.Length < 1) {
 }
 using var muxer = new MediaMuxer(args[0]);
 
-double frameRate = 24.0;
+var frameRate = new Rational(24, 1);
 using var videoFrame = new VideoFrame(1280, 720, PixelFormats.YUV420P);
 using var videoEnc = new VideoEncoder(MediaCodec.GetEncoder("libx264"), videoFrame.Format, frameRate);
 
@@ -30,7 +30,7 @@ if (args[0].EndsWith(".mp4")) {
 }
 muxer.Open(muxerOpts); //Open encoders and write header
 
-int numFrames = (int)Math.Round(frameRate * 10); //Encode 10s of video
+int numFrames = (int)(frameRate * 10); //Encode 10s of video
 for (int i = 0; i < numFrames; i++) {
     videoFrame.PresentationTimestamp = videoEnc.GetFramePts(frameNumber: i);
     GenerateFrame(videoFrame);

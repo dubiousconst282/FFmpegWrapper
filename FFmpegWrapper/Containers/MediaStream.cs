@@ -9,7 +9,7 @@ public unsafe class MediaStream
     public AVMediaType Type => Handle->codecpar->codec_type;
 
     /// <inheritdoc cref="AVStream.time_base" />
-    public AVRational TimeBase => Handle->time_base;
+    public Rational TimeBase => Handle->time_base;
 
     /// <summary> Pts of the first frame of the stream in presentation order, in stream time base. </summary>
     public long? StartTime => Helpers.GetPTS(Handle->start_time);
@@ -17,7 +17,7 @@ public unsafe class MediaStream
     /// <inheritdoc cref="AVStream.duration" />
     public TimeSpan? Duration => Helpers.GetTimeSpan(Handle->duration, TimeBase);
 
-    public double AvgFrameRate => ffmpeg.av_q2d(Handle->avg_frame_rate);
+    public Rational AvgFrameRate => Handle->avg_frame_rate;
 
     public MediaDictionary Metadata => new(&Handle->metadata);
 
@@ -33,7 +33,7 @@ public unsafe class MediaStream
     }
 
     /// <summary> Returns the corresponding <see cref="TimeSpan"/> for the given timestamp based on <see cref="TimeBase"/> units. </summary>
-    public TimeSpan GetTimestamp(long pts) => Helpers.GetTimeSpan(pts, TimeBase) ?? TimeSpan.Zero;
+    public TimeSpan GetTimestamp(long pts) => Rational.GetTimeSpan(pts, TimeBase);
 }
 
 [Flags]
