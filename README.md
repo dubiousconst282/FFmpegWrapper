@@ -1,41 +1,23 @@
-# FFmpegWrapper
-Object-oriented FFmpeg API wrappers (powered by [FFmpeg.AutoGen](https://github.com/Ruslan-B/FFmpeg.AutoGen)).
-
+# FFmpeg.ApiWrapper
 ![GitHub](https://img.shields.io/github/license/dubiousconst282/FFmpegWrapper)
 [![Nuget](https://img.shields.io/nuget/v/FFmpeg.ApiWrapper)](https://www.nuget.org/packages/FFmpeg.ApiWrapper)
 
+Low level, mostly safe FFmpeg API wrappers built on top of [FFmpeg.AutoGen](https://github.com/Ruslan-B/FFmpeg.AutoGen).
+
 ---
 
-Using the ffmpeg API tends to be tedious and error prone, mainly due to the extensive need for struct setup and manual error checking.  
-This library aims to abstract away most of such code while still exposing pointers in order to allow for lower-level control.
+Using the FFmpeg API tends to be tedious and error prone due to the amount of struct setup, memory management, and vague error codes.  
+This library aims to provide safe idiomatic wrappers and utility functions around several APIs, to facilitate development of media applications.
 
 ## Examples
-Executable code samples are available in the [samples](./Samples/) directory.
+The easiest way to get started may be by looking at the code samples listed below. The wrappers do not diverge too much from their native counterparts, so familiarity with the native API may help with more complicated use cases.
 
-- [Thumbnail Extractor (video decoding, seeking)](./Samples/ThumbExtractor/Program.cs)
-- [Encoding procedurally generated audio and video](./Samples/AVEncode/Program.cs)
+- [Extracting video frames](./Samples/FrameExtractor/Program.cs)
+- [Encoding generated audio and video](./Samples/AVEncode/Program.cs)
 - [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
-- [Hardware decoding and toy OpenGL player](./Samples/HWDecode/PlaybackWindow.cs)
-- [Hardware encoding](./Samples/HWEncode/PlaybackWindow.cs)
-- [Audio and video transcoding](./Samples/AVTranscode/Program.cs)
+- [Hardware decoding and crude OpenGL player](./Samples/HWDecode/PlayerWindow.cs)
+- [Hardware encoding](./Samples/HWEncode/ShaderRecWindow.cs)
+- [Transcoding audio and video](./Samples/AVTranscode/Program.cs)
+- [Building and rendering filter graphs](./Samples/Filtering/Program.cs)
 
-Note ffmpeg binaries must be manually copied to the build directory, or specified though `ffmpeg.RootPath` as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
-
-### Showcase: Basic video encoding
-```cs
-using var muxer = new MediaMuxer("output.mp4");
-
-using var frame = new VideoFrame(1280, 720, PixelFormats.YUV420P);
-using var encoder = new VideoEncoder(CodecIds.H264, frame.Format, frameRate: 24.0, bitrate: 900_000);
-encoder.SetOption("preset", "faster"); //libx264 specific
-
-var stream = muxer.AddStream(encoder);
-muxer.Open();
-
-for (int i = 0; i < 24 * 10; i++) { //Encode 10s of video
-    frame.PresentationTimestamp = encoder.GetFramePts(frameNumber: i); //Based on framerate. Alt overload takes TimeSpan.
-    // ... fill `frame` with something interesting ...
-    muxer.EncodeAndWrite(stream, encoder, frame); //all-in-one: send_frame(), receive_packet(), rescale_ts(), write_interleaved()
-}
-muxer.EncodeAndWrite(stream, encoder, null); //flush delayed frames in the encoder
-```
+On Windows, FFmpeg binaries must be manually copied to the build directory, or specified through `ffmpeg.RootPath` as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
