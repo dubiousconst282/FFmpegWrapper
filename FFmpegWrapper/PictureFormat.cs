@@ -6,14 +6,23 @@ public readonly struct PictureFormat
     public int Height { get; }
     public AVPixelFormat PixelFormat { get; }
 
+    public Rational PixelAspectRatio { get; } = Rational.One;
+
     public int NumPlanes => ffmpeg.av_pix_fmt_count_planes(PixelFormat);
     public bool IsPlanar => NumPlanes >= 2;
 
-    public PictureFormat(int w, int h, AVPixelFormat fmt = AVPixelFormat.AV_PIX_FMT_RGBA)
+    public PictureFormat(int width, int height, AVPixelFormat pixelFormat)
     {
-        Width = w;
-        Height = h;
-        PixelFormat = fmt;
+        Width = width;
+        Height = height;
+        PixelFormat = pixelFormat;
+    }
+    public PictureFormat(int width, int height, AVPixelFormat pixelFormat, Rational pixelAspectRatio)
+    {
+        Width = width;
+        Height = height;
+        PixelFormat = pixelFormat;
+        PixelAspectRatio = pixelAspectRatio;
     }
 
     /// <param name="align">Ensures that width and height are a multiple of this value.</param>
@@ -40,3 +49,23 @@ public readonly struct PictureFormat
         return $"{Width}x{Height} {fmt}";
     }
 }
+
+//TODO: expose colorspace stuff
+/*
+public readonly struct ColorspaceParams
+{
+    public AVColorSpace Colorspace { get; }
+    public AVColorPrimaries Primaries { get; }
+    public AVColorTransferCharacteristic TransferChars { get; }
+    public AVColorRange Range { get; }
+    public AVChromaLocation ChromaLocation { get; }
+
+    public ColorspaceParams(AVColorSpace colorspace, AVColorPrimaries primaries, AVColorTransferCharacteristic transferChars, AVColorRange range, AVChromaLocation chromaLocation)
+    {
+        Colorspace = colorspace;
+        Primaries = primaries;
+        TransferChars = transferChars;
+        Range = range;
+        ChromaLocation = chromaLocation;
+    }
+}*/
