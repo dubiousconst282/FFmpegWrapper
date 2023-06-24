@@ -1,23 +1,31 @@
 using FFmpeg.Wrapper;
-using System.Text;
 
 using GL2O;
 
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using FFmpeg.AutoGen;
 using System.Diagnostics;
 
 using Matrix3x3 = OpenTK.Mathematics.Matrix3;
 
-public unsafe class PlaybackWindow : GameWindow
+//Crude OpenGL video player using hardware accelerated decoding.
+//This supports audio playback via the Windows Audio Session API, but there's no
+//A/V synchronization or compensation, so they may drift or be badly synced in general.
+public unsafe class PlayerWindow : GameWindow
 {
     private MediaDemuxer _demuxer;
+    private MediaPacket _packet = new();
+
     private MediaStream _stream;
     private VideoDecoder _decoder;
     private VideoFrame _frame = new();
-    private MediaPacket _packet = new();
+
+    private MediaStream _audioStream;
+    private AudioDecoder _audioDecoder;
+    private AudioFrame _audioFrame = new();
+    private SwResampler _resampler;
+    private IAudioSink _audioSink;
 
     private ShaderProgram _shader = null!;
     private Texture2D _textureY = null!, _textureUV = null!;
@@ -26,8 +34,9 @@ public unsafe class PlaybackWindow : GameWindow
 
     private double _avgDecodeTime;
     private TimeSpan _timestamp;
+    private TimeSpan _audioTimestamp;
 
-    public PlaybackWindow(string videoPath)
+    public PlayerWindow(string videoPath)
         : base(
             new GameWindowSettings(),
             new NativeWindowSettings() {
@@ -38,43 +47,40 @@ public unsafe class PlaybackWindow : GameWindow
     {
         _demuxer = new MediaDemuxer(videoPath);
 
+        //Setup video decoder
         _stream = _demuxer.FindBestStream(MediaTypes.Video)!;
         _decoder = (VideoDecoder)_demuxer.CreateStreamDecoder(_stream, open: false);
 
-        var bestConfig = _decoder.GetHardwareConfigs()
-            .DefaultIfEmpty()
-            .MaxBy(config => config.DeviceType switch {
-                HWDeviceTypes.VAAPI => 100,
-                //HWDeviceTypes.D3D11VA   => 100,   no map() support as of 6.0
-                HWDeviceTypes.DXVA2 => 90,
-                _ => -1,  //Ignore unknown accelerators for now
-            });
+        //VAAPI has the best support in ffmpeg but it's Linux only.
+        //D3D11VA doesn't support frame mappings used in this example, so that leaves us with DXVA2.
+        var hwConfig = _decoder.GetHardwareConfigs().FirstOrDefault(config => config.DeviceType == HWDeviceTypes.DXVA2);
 
-        //HWDevice is ref-counted, it's ok to dispose of it here.
-        using var device = HardwareDevice.Create(bestConfig.DeviceType);
+        if (hwConfig.DeviceType != HWDeviceTypes.None) {
+            //Note that HardwareDevice is ref-counted, it's safe to dispose
+            //of it here as the decoder will increment the counter.
+            using var device = HardwareDevice.Create(hwConfig.DeviceType);
 
-        if (device != null) {
-            _decoder.SetupHardwareAccelerator(bestConfig, device);
+            if (device != null) {
+                _decoder.SetupHardwareAccelerator(hwConfig, device);
+            }
         }
         _decoder.Open();
 
-        RenderFrequency = _stream.AvgFrameRate;
-        UpdateFrequency = 5; //don't waste CPU on update logic
+        //Setup audio decoder and playback engine
+        _audioStream = _demuxer.FindBestStream(MediaTypes.Audio)!;
+        _audioDecoder = (AudioDecoder)_demuxer.CreateStreamDecoder(_audioStream, open: true);
+
+        _audioSink = new WasapiAudioSink(_audioDecoder.Format, latencyMs: 100);
+        _resampler = new SwResampler(_audioDecoder.Format, _audioSink.Format);
+        _audioSink.Start();
+
+        RenderFrequency = (double)_stream.AvgFrameRate;
+        UpdateFrequency = 50;
     }
 
     protected override void OnLoad()
     {
         base.OnLoad();
-
-        GL.DebugMessageCallback((source, type, id, severity, length, ptext, _) => {
-            var severityStr = severity.ToString().Substring("DebugSeverity".Length).ToUpper();
-            var sourceStr = source.ToString().Substring("DebugSource".Length);
-            var typeStr = type.ToString().Substring("DebugType".Length);
-            var text = Encoding.UTF8.GetString((byte*)ptext, length);
-
-            Console.WriteLine($"GL-{sourceStr}-{typeStr}: [{severityStr}] {text}");
-        }, 0);
-        GL.Enable(EnableCap.DebugOutput);
 
         string shaderBasePath = AppContext.BaseDirectory + "shaders/";
 
@@ -84,7 +90,6 @@ public unsafe class PlaybackWindow : GameWindow
         _shader.Link();
 
         _format = VertexFormat.CreateEmpty();
-
         _emptyVbo = new BufferObject(16, BufferStorageFlags.None);
 
         _textureY = new Texture2D(_decoder.Width, _decoder.Height, 1, SizedInternalFormat.R8);
@@ -100,7 +105,11 @@ public unsafe class PlaybackWindow : GameWindow
         var decodeTime = Stopwatch.GetElapsedTime(startTime);
 
         _avgDecodeTime = _avgDecodeTime * 0.98 + decodeTime.TotalMilliseconds * 0.02;
-        Title = $"Playing {_timestamp:mm\\:ss\\.ff} - DecodeTime: {_avgDecodeTime:0.00}ms (~{1000 / _avgDecodeTime:0} FPS)";
+
+        double audioDelayMs = (_timestamp - _audioTimestamp).TotalSeconds;
+        audioDelayMs += _resampler.BufferedSamples / (double)_resampler.OutputFormat.SampleRate;
+
+        Title = $"Playing {_timestamp:mm\\:ss\\.ff} - DecodeTime: {_avgDecodeTime:0.00}ms | AudioDelay: {audioDelayMs * 1000.0:0.0}ms";
 
         //Render
         _textureY.BindUnit(0);
@@ -132,39 +141,50 @@ public unsafe class PlaybackWindow : GameWindow
         while (true) {
             //Check if there's a decoded frame available before reading more packets.
             if (_decoder.ReceiveFrame(_frame)) {
-                _timestamp = _stream.GetTimestamp(_frame.PresentationTimestamp!.Value);
+                _timestamp = _stream.GetTimestamp(_frame.BestEffortTimestamp!.Value);
                 UploadFrame();
                 return true;
             }
+            //Buffer up audio samples in the resampler
+            if (_audioDecoder.ReceiveFrame(_audioFrame)) {
+                _audioTimestamp = _audioStream.GetTimestamp(_audioFrame.BestEffortTimestamp!.Value);
+                _resampler.SendFrame(_audioFrame);
+            }
+
             if (!_demuxer.Read(_packet)) {
                 return false; //end of file
             }
+
             if (_packet.StreamIndex == _stream.Index) {
                 _decoder.SendPacket(_packet);
+            } else if (_packet.StreamIndex == _audioStream.Index) {
+                _audioDecoder.SendPacket(_packet);
             }
         }
     }
 
     private void UploadFrame()
     {
+        //There's no easy way to interop between HW and GL surfaces, so we'll have to do a copy through the CPU here.
+        //For what is worth, a 4K 60FPS P010 stream will in theory only take ~1400MB/s of bandwidth. Not bad.
+
         Debug.Assert(_frame.IsHardwareFrame); //TODO: implement support for SW frames
 
-        //There's no easy way to interop between HW and GL surfaces,
-        //so we'll have to do a copy back to the CPU.
-        using var mapping = _frame.Map(HardwareFrameMappingFlags.Read | HardwareFrameMappingFlags.Direct);
+        //Map() may return null if the device doesn't support frame mappings. In this case, TransferTo() should be used instead.
+        using var frame = _frame.Map(HardwareFrameMappingFlags.Read | HardwareFrameMappingFlags.Direct)!;
 
-        var (pixelType, pixelStride) = mapping.PixelFormat switch {
+        var (pixelType, pixelStride) = frame.PixelFormat switch {
             PixelFormats.NV12   => (PixelType.UnsignedByte, 1),
-            PixelFormats.P010LE => (PixelType.UnsignedShort, 2),
+            PixelFormats.P010LE => (PixelType.UnsignedShort, 2)
         };
 
         _textureY.SetPixels<byte>(
-            mapping.GetPlaneSpan<byte>(0, out int strideY),
+            frame.GetPlaneSpan<byte>(0, out int strideY),
             0, 0, _frame.Width, _frame.Height,
             PixelFormat.Red, pixelType, rowLength: strideY / pixelStride);
 
         _textureUV.SetPixels<byte>(
-            mapping.GetPlaneSpan<byte>(1, out int strideUV),
+            frame.GetPlaneSpan<byte>(1, out int strideUV),
             0, 0, _frame.Width / 2, _frame.Height / 2,
             PixelFormat.Rg, pixelType, rowLength: strideUV / pixelStride / 2);
     }
@@ -173,19 +193,29 @@ public unsafe class PlaybackWindow : GameWindow
     {
         base.OnUpdateFrame(e);
 
-        if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
+        //Fill the play queue with resampled audio.
+        var playBuffer = _audioSink.GetQueueBuffer<byte>();
+        if (playBuffer.Length > 0) {
+            int samplesWritten = _resampler.ReceiveFrame(playBuffer);
+            _audioSink.AdvanceQueue(samplesWritten);
+        }
+
+        if (IsKeyPressed(Keys.Escape)) Close();
         
-        if (KeyboardState.IsKeyDown(Keys.Left)) SeekRelative(-5);
-        if (KeyboardState.IsKeyDown(Keys.Right)) SeekRelative(+5);
+        if (IsKeyPressed(Keys.Left)) SeekRelative(-10);
+        if (IsKeyPressed(Keys.Right)) SeekRelative(+10);
     }
 
     private void SeekRelative(int secs)
     {
         Console.WriteLine("Seek to " + (_timestamp + TimeSpan.FromSeconds(secs)));
-        //Note that Seek() will go to some keyframe before the requested timestamp.
-        //If more precision is needed, frames should be decoded and discarded until the desired timestamp.
-        if (_demuxer.Seek(_timestamp + TimeSpan.FromSeconds(secs))) {
+
+        var opts = secs < 0 ? SeekOptions.Backward : SeekOptions.Forward;
+
+        if (_demuxer.Seek(_timestamp + TimeSpan.FromSeconds(secs), opts)) {
             _decoder.Flush();
+            _audioDecoder.Flush();
+            _resampler.DropOutputSamples(_resampler.BufferedSamples * 2);
         }
     }
 
@@ -203,6 +233,12 @@ public unsafe class PlaybackWindow : GameWindow
         _demuxer.Dispose();
         _frame.Dispose();
         _packet.Dispose();
+
+        _audioSink.Stop();
+        _audioSink.Dispose();
+        _resampler.Dispose();
+        _audioDecoder.Dispose();
+        _audioFrame.Dispose();
 
         _shader.Dispose();
         _emptyVbo.Dispose();
