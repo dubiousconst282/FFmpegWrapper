@@ -6,7 +6,9 @@ public readonly struct PictureFormat
     public int Height { get; }
     public AVPixelFormat PixelFormat { get; }
 
-    public Rational PixelAspectRatio { get; } = Rational.One;
+    /// <summary> Pixel aspect ratio, <c>width / height</c>. </summary>
+    /// <remarks> May be <c>0/1</c> if unknown or undefined. </remarks>
+    public Rational PixelAspectRatio { get; }
 
     public int NumPlanes => ffmpeg.av_pix_fmt_count_planes(PixelFormat);
     public bool IsPlanar => NumPlanes >= 2;
@@ -16,6 +18,7 @@ public readonly struct PictureFormat
         Width = width;
         Height = height;
         PixelFormat = pixelFormat;
+        PixelAspectRatio = Rational.Zero;
     }
     public PictureFormat(int width, int height, AVPixelFormat pixelFormat, Rational pixelAspectRatio)
     {

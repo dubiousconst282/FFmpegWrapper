@@ -6,7 +6,7 @@ public unsafe class VideoFrame : MediaFrame
     public int Height => _frame->height;
     public AVPixelFormat PixelFormat => (AVPixelFormat)_frame->format;
 
-    public PictureFormat Format => new PictureFormat(Width, Height, PixelFormat);
+    public PictureFormat Format => new PictureFormat(Width, Height, PixelFormat, _frame->sample_aspect_ratio);
 
     /// <summary> Pointers to the pixel data planes. </summary>
     /// <remarks> These can point to the end of image data when used in combination with negative values in <see cref="RowSize"/>. </remarks>
@@ -25,7 +25,7 @@ public unsafe class VideoFrame : MediaFrame
     /// <summary> Whether the frame rows are flipped. Alias for <c>RowSize[0] &lt; 0</c>. </summary>
     public bool IsVerticallyFlipped => _frame->linesize[0] < 0;
 
-    /// <summary> Allocates a new empty <see cref="AVFrame"/>. </summary>
+    /// <summary> Allocates an empty <see cref="AVFrame"/>. </summary>
     public VideoFrame()
         : this(ffmpeg.av_frame_alloc(), takeOwnership: true) { }
 

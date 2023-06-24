@@ -16,7 +16,7 @@ public unsafe class VideoEncoder : MediaEncoder
     }
 
     public PictureFormat FrameFormat {
-        get => new(Width, Height, PixelFormat);
+        get => new(Width, Height, PixelFormat, _ctx->sample_aspect_ratio);
         set {
             _ctx->width = value.Width;
             _ctx->height = value.Height;
