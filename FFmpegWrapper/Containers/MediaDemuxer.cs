@@ -22,7 +22,7 @@ public unsafe class MediaDemuxer : FFObject
     public ImmutableArray<MediaStream> Streams { get; }
 
     /// <inheritdoc cref="AVFormatContext.metadata" />
-    public MediaDictionary Metadata => new(&Handle->metadata);
+    public MediaDictionary Metadata => new(&_ctx->metadata);
 
     public bool CanSeek => _ctx->pb->seek.Pointer != IntPtr.Zero;
 
@@ -60,6 +60,8 @@ public unsafe class MediaDemuxer : FFObject
     /// <summary> Find the "best" stream in the file. The best stream is determined according to various heuristics as the most likely to be what the user expects. </summary>
     public MediaStream? FindBestStream(AVMediaType type)
     {
+        ThrowIfDisposed();
+
         int index = ffmpeg.av_find_best_stream(_ctx, type, -1, -1, null, 0);
         return index < 0 ? null : Streams[index];
     }
@@ -72,6 +74,8 @@ public unsafe class MediaDemuxer : FFObject
     /// <returns></returns>
     public MediaDecoder CreateStreamDecoder(MediaStream stream, bool open = true)
     {
+        ThrowIfDisposed();
+
         if (Streams[stream.Index] != stream) {
             throw new ArgumentException("Specified stream is not owned by the demuxer.");
         }
@@ -93,12 +97,13 @@ public unsafe class MediaDemuxer : FFObject
     public bool Read(MediaPacket packet)
     {
         ThrowIfDisposed();
+
         int result = ffmpeg.av_read_frame(_ctx, packet.UnrefAndGetHandle());
 
-        if (result != 0 && result != ffmpeg.AVERROR_EOF) {
+        if (result < 0 && result != ffmpeg.AVERROR_EOF) {
             result.ThrowError("Failed to read packet");
         }
-        return result == 0;
+        return result >= 0;
     }
 
     /// <summary> Seeks the demuxer to somewhere near <paramref name="timestamp"/>, according to <paramref name="options"/>. </summary>
