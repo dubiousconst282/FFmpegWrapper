@@ -59,9 +59,9 @@ public readonly struct Rational : IEquatable<Rational>, IComparable<Rational>
     public static implicit operator AVRational(Rational q) => new() { num = q.Num, den = q.Den };
 
     public override string ToString() => $"{Num}/{Den}";
-    public override bool Equals(object other) => other is Rational r && r == this;
+    public override bool Equals(object other) => other is Rational r && Equals(r);
     public override int GetHashCode() => Math.Round((double)this, 10).GetHashCode();
 
-    public bool Equals(Rational other) => other == this;
+    public bool Equals(Rational other) => other == this || ((other.Den | Den) == 0 && (other.Num ^ Num) >= 0);
     public int CompareTo(Rational other) => ffmpeg.av_cmp_q(this, other);
 }
