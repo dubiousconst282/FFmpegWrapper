@@ -41,7 +41,15 @@ public unsafe class MediaPacket : FFObject
         set => _pkt->stream_index = value;
     }
 
-    public Span<byte> Data => new(_pkt->data, _pkt->size);
+    /// <summary> Whether this packet contains a key-frame. (Checks if AV_PKT_FLAG_KEY is set) </summary>
+    public bool IsKeyFrame {
+        get => (_pkt->flags & ffmpeg.AV_PKT_FLAG_KEY) != 0;
+        set => _pkt->flags = value ? (_pkt->flags | ffmpeg.AV_PKT_FLAG_KEY) : (_pkt->flags & ~ffmpeg.AV_PKT_FLAG_KEY);
+    }
+
+    public Span<byte> Data {
+        get => new(_pkt->data, _pkt->size);
+    }
 
     public MediaPacket()
     {
@@ -50,6 +58,27 @@ public unsafe class MediaPacket : FFObject
         if (_pkt == null) {
             throw new OutOfMemoryException();
         }
+    }
+    public MediaPacket(int size)
+        : this()
+    {
+        ffmpeg.av_new_packet(_pkt, size).CheckError("Failed to allocate packet buffer");
+    }
+
+    /// <summary> Copies the specified data span to the packet, ensuring buffer space. </summary>
+    public void SetData(ReadOnlySpan<byte> data)
+    {
+        ThrowIfDisposed();
+
+        if (_pkt->buf == null || _pkt->buf->size < (ulong)data.Length + ffmpeg.AV_INPUT_BUFFER_PADDING_SIZE) {
+            byte* buffer = (byte*)ffmpeg.av_malloc((ulong)data.Length + ffmpeg.AV_INPUT_BUFFER_PADDING_SIZE);
+            if (buffer == null) {
+                throw new OutOfMemoryException();
+            }
+            ffmpeg.av_packet_from_data(_pkt, buffer, data.Length).CheckError("Failed to allocate packet buffer");
+        }
+        _pkt->size = data.Length;
+        data.CopyTo(Data);
     }
 
     /// <inheritdoc cref="ffmpeg.av_packet_rescale_ts(AVPacket*, AVRational, AVRational)"/>

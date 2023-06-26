@@ -71,6 +71,7 @@ public unsafe class VideoEncoder : MediaEncoder
         return ffmpeg.av_rescale_q(frameNumber, ffmpeg.av_inv_q(FrameRate), TimeBase);
     }
 
+    /// <summary> Searches for a hardware device suitable for encoding the given codec and frame format. </summary>
     public static HardwareDevice? CreateCompatibleHardwareDevice(AVCodecID codecId, in PictureFormat format, out CodecHardwareConfig codecConfig)
     {
         foreach (var config in VideoEncoder.GetHardwareConfigs(codecId)) {
@@ -89,6 +90,9 @@ public unsafe class VideoEncoder : MediaEncoder
         return null;
     }
 
+    /// <summary> Returns a new list containing all hardware encoder configurations that may or not be available. </summary>
+    /// <param name="codecId"> If specified, the list will only include configs for this codec. </param>
+    /// <param name="deviceType"> If specified, the list will only include configs for this device type. </param>
     public static List<CodecHardwareConfig> GetHardwareConfigs(AVCodecID? codecId = null, AVHWDeviceType? deviceType = null)
     {
         var configs = new List<CodecHardwareConfig>();
