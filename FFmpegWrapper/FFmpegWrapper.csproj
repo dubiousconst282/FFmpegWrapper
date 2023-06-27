@@ -8,7 +8,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
 
     <PackageId>FFmpeg.ApiWrapper</PackageId>
-    <Description>Object oriented FFmpeg API wrapper, powered by FFmpeg.AutoGen.</Description>
+    <Description>Low level, mostly safe FFmpeg API wrappers based on FFmpeg.AutoGen.</Description>
     <Version>0.0.0-dev</Version>
     <Product>FFmpeg.ApiWrapper</Product>
     <PackageProjectUrl>https://github.com/dubiousconst282/FFmpegWrapper</PackageProjectUrl>
@@ -31,6 +31,6 @@
   <ItemGroup>
     <PackageReference Include="FFmpeg.AutoGen" Version="6.0.0" />
     <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 </Project>
