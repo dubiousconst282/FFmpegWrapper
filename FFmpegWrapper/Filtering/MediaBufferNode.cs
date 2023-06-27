@@ -43,10 +43,14 @@ public unsafe class AudioBufferSink : MediaBufferSink
     /// <summary> Gets the output audio format. The returned value is undefined if the filter graph is not configured. </summary>
     public AudioFormat Format {
         get {
-            AVChannelLayout layout;
             int fmt = ffmpeg.av_buffersink_get_format(Handle);
             int rate = ffmpeg.av_buffersink_get_sample_rate(Handle);
-            ffmpeg.av_buffersink_get_ch_layout(Handle, &layout);
+
+            AVChannelLayout nativeLayout;
+            ffmpeg.av_buffersink_get_ch_layout(Handle, &nativeLayout);
+            var layout = ChannelLayout.FromExisting(&nativeLayout);
+            ffmpeg.av_channel_layout_uninit(&nativeLayout);
+            
             return new AudioFormat((AVSampleFormat)fmt, rate, layout);
         }
     }

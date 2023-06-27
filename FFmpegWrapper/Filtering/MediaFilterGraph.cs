@@ -76,37 +76,39 @@ public unsafe class MediaFilterGraph : FFObject
 
     public MediaBufferSource AddAudioBufferSource(AudioFormat format, Rational timeBase)
     {
-        var pars = new AVBufferSrcParameters() {
-            format = (int)format.SampleFormat,
-            sample_rate = format.SampleRate,
-            ch_layout = format.Layout,
-            time_base = timeBase
-        };
-        return AddBufferSource(&pars, "abuffer");
+        var pars = ffmpeg.av_buffersrc_parameters_alloc();
+        pars->format = (int)format.SampleFormat;
+        pars->sample_rate = format.SampleRate;
+        pars->ch_layout = format.Layout.Native;
+        pars->time_base = timeBase;
+        return AddBufferSource(pars, "abuffer");
     }
 
     /// <param name="frameRate"> The frame rate of the input video. Must only be  set to a non-zero value if input stream has a known constant framerate and should be left at its initial value if the framerate is variable or unknown.</param>
     public MediaBufferSource AddVideoBufferSource(PictureFormat format, Rational frameRate, Rational timeBase)
     {
-        var pars = new AVBufferSrcParameters() {
-            width = format.Width,
-            height = format.Height,
-            format = (int)format.PixelFormat,
-            frame_rate = frameRate,
-            sample_aspect_ratio = format.PixelAspectRatio,
-            time_base = timeBase
-        };
-        return AddBufferSource(&pars, "buffer");
+        var pars = ffmpeg.av_buffersrc_parameters_alloc();
+        pars->width = format.Width;
+        pars->height = format.Height;
+        pars->format = (int)format.PixelFormat;
+        pars->frame_rate = frameRate;
+        pars->sample_aspect_ratio = format.PixelAspectRatio;
+        pars->time_base = timeBase;
+        return AddBufferSource(pars, "buffer");
     }
 
     private MediaBufferSource AddBufferSource(AVBufferSrcParameters* pars, string filterName)
     {
         ThrowIfConfigured();
 
-        var node = ffmpeg.avfilter_graph_alloc_filter(_ctx, ffmpeg.avfilter_get_by_name(filterName), "source");
-        ffmpeg.av_buffersrc_parameters_set(node, pars).CheckError("Failed to set buffer source parameters");
-        ffmpeg.avfilter_init_str(node, null).CheckError("Failed to initialize buffer source node");
-        return new MediaBufferSource(node);
+        try {
+            var node = ffmpeg.avfilter_graph_alloc_filter(_ctx, ffmpeg.avfilter_get_by_name(filterName), "source");
+            ffmpeg.av_buffersrc_parameters_set(node, pars).CheckError("Failed to set buffer source parameters");
+            ffmpeg.avfilter_init_str(node, null).CheckError("Failed to initialize buffer source node");
+            return new MediaBufferSource(node);
+        } finally {
+            ffmpeg.av_free(pars);
+        }
     }
 
     public AudioBufferSink AddAudioBufferSink(MediaFilterNodePad input)

@@ -11,17 +11,21 @@ public unsafe class AudioEncoder : MediaEncoder
         set => SetOrThrowIfOpen(ref _ctx->sample_rate, value);
     }
     public int NumChannels => _ctx->ch_layout.nb_channels;
-    public AVChannelLayout ChannelLayout {
-        get => _ctx->ch_layout;
-        set => SetOrThrowIfOpen(ref _ctx->ch_layout, value);
+    public ChannelLayout ChannelLayout {
+        get => ChannelLayout.FromExisting(&_ctx->ch_layout);
+        set {
+            ThrowIfOpen();
+            value.CopyTo(&_ctx->ch_layout);
+        }
     }
 
     public AudioFormat Format {
-        get => new(_ctx);
+        get => new(SampleFormat, SampleRate, ChannelLayout);
         set {
+            ThrowIfOpen();
             _ctx->sample_rate = value.SampleRate;
             _ctx->sample_fmt = value.SampleFormat;
-            _ctx->ch_layout = value.Layout;
+            value.Layout.CopyTo(&_ctx->ch_layout);
         }
     }
 

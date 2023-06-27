@@ -5,8 +5,9 @@ public unsafe class AudioFrame : MediaFrame
     public AVSampleFormat SampleFormat => (AVSampleFormat)_frame->format;
     public int SampleRate => _frame->sample_rate;
     public int NumChannels => _frame->ch_layout.nb_channels;
+    public ChannelLayout ChannelLayout => ChannelLayout.FromExisting(&_frame->ch_layout);
 
-    public AudioFormat Format => new AudioFormat(_frame);
+    public AudioFormat Format => new(SampleFormat, SampleRate, ChannelLayout);
 
     public byte** Data => (byte**)&_frame->data;
     public int Stride => _frame->linesize[0];
@@ -25,16 +26,16 @@ public unsafe class AudioFrame : MediaFrame
 
     public int Capacity => Stride / (ffmpeg.av_get_bytes_per_sample(SampleFormat) * (IsPlanar ? 1 : NumChannels));
 
-    /// <summary> Allocates a new empty <see cref="AVFrame"/>. </summary>
+    /// <summary> Allocates an empty <see cref="AVFrame"/>. </summary>
     public AudioFrame()
         : this(ffmpeg.av_frame_alloc(), takeOwnership: true) { }
 
-    public AudioFrame(AudioFormat fmt, int capacity)
+    public AudioFrame(in AudioFormat fmt, int capacity)
     {
         _frame = ffmpeg.av_frame_alloc();
         _frame->format = (int)fmt.SampleFormat;
         _frame->sample_rate = fmt.SampleRate;
-        _frame->ch_layout = fmt.Layout;
+        fmt.Layout.CopyTo(&_frame->ch_layout);
 
         _frame->nb_samples = capacity;
         ffmpeg.av_frame_get_buffer(_frame, 0).CheckError("Failed to allocate frame buffers.");

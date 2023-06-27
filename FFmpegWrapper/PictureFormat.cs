@@ -1,6 +1,6 @@
 ﻿namespace FFmpeg.Wrapper;
 
-public readonly struct PictureFormat
+public readonly struct PictureFormat : IEquatable<PictureFormat>
 {
     public int Width { get; }
     public int Height { get; }
@@ -51,6 +51,14 @@ public readonly struct PictureFormat
         var fmt = PixelFormat.ToString().Substring("AV_PIX_FMT_".Length);
         return $"{Width}x{Height} {fmt}";
     }
+
+    public bool Equals(PictureFormat other) =>
+        other.Width == Width && other.Height == Height && 
+        other.PixelFormat == PixelFormat &&
+        other.PixelAspectRatio.Equals(PixelAspectRatio);
+
+    public override bool Equals(object obj) => obj is PictureFormat other && Equals(other);
+    public override int GetHashCode() => (Width, Height, (int)PixelFormat).GetHashCode();
 }
 
 //TODO: expose colorspace stuff

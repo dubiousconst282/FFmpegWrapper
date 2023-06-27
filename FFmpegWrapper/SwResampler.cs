@@ -21,12 +21,12 @@ public unsafe class SwResampler : FFObject
     {
         _ctx = ffmpeg.swr_alloc();
 
-        var tempLayout = inFmt.Layout;
+        var tempLayout = inFmt.Layout.Native;
         ffmpeg.av_opt_set_chlayout(_ctx, "in_chlayout", &tempLayout, 0);
         ffmpeg.av_opt_set_int(_ctx, "in_sample_rate", inFmt.SampleRate, 0);
         ffmpeg.av_opt_set_int(_ctx, "in_sample_fmt", (long)inFmt.SampleFormat, 0);
 
-        tempLayout = outFmt.Layout;
+        tempLayout = outFmt.Layout.Native;
         ffmpeg.av_opt_set_chlayout(_ctx, "out_chlayout", &tempLayout, 0);
         ffmpeg.av_opt_set_int(_ctx, "out_sample_rate", outFmt.SampleRate, 0);
         ffmpeg.av_opt_set_int(_ctx, "out_sample_fmt", (long)outFmt.SampleFormat, 0);

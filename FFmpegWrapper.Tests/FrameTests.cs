@@ -45,4 +45,20 @@ public class FrameTests
         frame.Dispose();
         Assert.Throws<ObjectDisposedException>(() => _ = frame.Handle);
     }
+
+    [Fact]
+    public unsafe void ChannelLayout_Props()
+    {
+        var a = ChannelLayout.GetDefault(2);
+        Assert.Equal(2, a.NumChannels);
+        Assert.Equal(ChannelOrder.Native, a.Order);
+        Assert.Equal("stereo", a.ToString());
+
+        var b = ChannelLayout.FromString("FL+FC+FR");
+        Assert.Equal(3, b.NumChannels);
+        Assert.Equal(ChannelOrder.Custom, b.Order);
+        Assert.Equal(AudioChannel.FrontLeft, b.GetChannel(0));
+        Assert.Equal(AudioChannel.FrontCenter, b.GetChannel(1));
+        Assert.Equal(AudioChannel.FrontRight, b.GetChannel(2));
+    }
 }
