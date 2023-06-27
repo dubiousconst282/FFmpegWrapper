@@ -24,10 +24,11 @@ public unsafe class VideoDecoder : MediaDecoder
     /// Before the decoder is open, setups hardware acceleration via the specified device. 
     /// If the device does not support the input format, a software decoder will be used instead.
     /// </summary>
-    public void SetupHardwareAccelerator(CodecHardwareConfig config, HardwareDevice device, HardwareFramePool? framePool = null)
+    public void SetupHardwareAccelerator(CodecHardwareConfig config, HardwareDevice device)
     {
         ThrowIfOpen();
-        SetHardwareContext(config, device, framePool);
+        SetHardwareContext(config, device, null);
+        //TODO: support custom decoder negotiation and hw_frames_ctx
 
         _ctx->get_format = _chooseHwPixelFmt = (ctx, pAvailFmts) => {
             for (var pFmt = pAvailFmts; *pFmt != PixelFormats.None; pFmt++) {

@@ -20,7 +20,7 @@ public unsafe class MediaMuxer : FFObject
     public IReadOnlyList<MediaStream> Streams => _streams.Select(s => s.Stream).ToList();
 
     /// <inheritdoc cref="AVFormatContext.metadata" />
-    public MediaDictionary Metadata => new(&Handle->metadata);
+    public MediaDictionary Metadata => new(&_ctx->metadata);
 
     public bool IsOpen { get; private set; } = false;
 
@@ -119,11 +119,30 @@ public unsafe class MediaMuxer : FFObject
     }
 
     /// <summary> Muxes the given packet to the output file, ensuring correct interleaving. </summary>
-    public void Write(MediaPacket packet)
+    /// <remarks>
+    /// This function will buffer the packets internally as needed to make sure the
+    /// packets in the output file are properly interleaved, usually ordered by
+    /// increasing dts.
+    /// </remarks>
+    /// <param name="packet">
+    /// This parameter can be null (at any time, not just at the end), to flush the interleaving queues.
+    /// <br/>
+    /// The <see cref="MediaPacket.StreamIndex"/> field must be
+    /// set to the index of the corresponding stream in <see cref="Streams"/>.
+    /// <br/>
+    /// The timestamps (PTS and DTS) must be set to correct values in the stream's timebase (unless the
+    /// output format is flagged with the AVFMT_NOTIMESTAMPS flag, then they can be set to AV_NOPTS_VALUE).
+    /// The dts for subsequent packets in one stream must be strictly increasing (unless the output format 
+    /// is flagged with the AVFMT_TS_NONSTRICT, then they merely have to be nondecreasing).
+    /// Duration should also be set if known.
+    /// <br/>
+    /// On return, the packet will have been reset.
+    /// </param>
+    public void Write(MediaPacket? packet)
     {
         ThrowIfNotOpen();
 
-        ffmpeg.av_interleaved_write_frame(_ctx, packet.Handle).CheckError("Failed to write packet");
+        ffmpeg.av_interleaved_write_frame(_ctx, packet == null ? null : packet.Handle).CheckError("Failed to write packet");
     }
 
     /// <summary> Encodes the given frame and muxes the resulting packets to the output file. </summary>
@@ -158,6 +177,8 @@ public unsafe class MediaMuxer : FFObject
     {
         if (_ctx != null) {
             ffmpeg.av_write_trailer(_ctx);
+            ffmpeg.avio_closep(&_ctx->pb);
+            
             ffmpeg.avformat_free_context(_ctx);
             _ctx = null;
 
