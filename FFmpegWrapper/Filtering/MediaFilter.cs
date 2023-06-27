@@ -25,18 +25,7 @@ public unsafe readonly struct MediaFilter
     }
 
     /// <summary> Returns a list of parameters accepted during initialization of an instance of this filter. </summary>
-    public IReadOnlyList<MediaFilterOption> GetOptions()
-    {
-        var list = new List<MediaFilterOption>();
-
-        AVOption* opt = null;
-        while ((opt = ffmpeg.av_opt_next(&Handle->priv_class, opt)) != null) {
-            if (opt->type == AVOptionType.AV_OPT_TYPE_CONST) continue;
-
-            list.Add(new MediaFilterOption(opt));
-        }
-        return list;
-    }
+    public IReadOnlyList<ContextOption> GetOptions() => ContextOption.GetOptions(&Handle->priv_class);
 
     public static IEnumerable<MediaFilter> GetRegisteredFilters()
     {
@@ -51,42 +40,6 @@ public unsafe readonly struct MediaFilter
     }
 
     public override string ToString() => Name;
-}
-public unsafe readonly struct MediaFilterOption
-{
-    public AVOption* Handle { get; }
-
-    public string Name => Helpers.PtrToStringUTF8(Handle->name)!;
-    public string Description => Helpers.PtrToStringUTF8(Handle->help)!;
-    public AVOptionType Type => Handle->type;
-    public double MinValue => Handle->min;
-    public double MaxValue => Handle->max;
-    public AVOption_default_val DefaultValue => Handle->default_val;
-
-    /// <summary> Whether this option defines a set of accepted input strings. </summary>
-    public bool IsEnum => Handle->unit != null;
-
-    internal MediaFilterOption(AVOption* handle) => Handle = handle;
-
-    /// <summary> Returns a list of acceptable input values for this enum option. </summary>
-    public IReadOnlyList<MediaFilterOption> GetEnumValues()
-    {
-        if (!IsEnum) {
-            throw new InvalidOperationException("Option is not an enum.");
-        }
-        var list = new List<MediaFilterOption>();
-
-        //The AVOption documentation says that AVClass options must be declared in
-        //a static null terminated array, so this should be mostly fine.
-        AVOption* opt = Handle + 1;
-
-        for (; opt->type == AVOptionType.AV_OPT_TYPE_CONST && opt->unit == Handle->unit; opt++) {
-            list.Add(new MediaFilterOption(opt));
-        }
-        return list;
-    }
-
-    public override string ToString() => Name + ": " + Type.ToString().ToLower().Substring("AV_OPT_TYPE_".Length);
 }
 
 [Flags]

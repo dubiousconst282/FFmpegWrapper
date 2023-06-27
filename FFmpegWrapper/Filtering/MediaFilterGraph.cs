@@ -33,10 +33,7 @@ public unsafe class MediaFilterGraph : FFObject
         }
 
         foreach (var (key, val) in args.Arguments) {
-            int res = SetBoxedOption(node, key, val, ffmpeg.AV_OPT_SEARCH_CHILDREN);
-            if (res < 0) {
-                res.ThrowError($"Invalid option '{key}' for filter '{args.Filter.Name}'");
-            }
+            ContextOption.Set(node, key, val, searchChildren: true);
         }
         if (args.HardwareDevice != null) {
             node->hw_device_ctx = ffmpeg.av_buffer_ref(args.HardwareDevice.Handle);
@@ -53,25 +50,6 @@ public unsafe class MediaFilterGraph : FFObject
         }
 
         return new MediaFilterNode(node);
-    }
-
-    private static int SetBoxedOption(AVFilterContext* node, string key, object val, int searchFlags)
-    {
-        var type = Type.GetTypeCode(val.GetType());
-
-        if (type is (>= TypeCode.SByte and <= TypeCode.Double) or TypeCode.Boolean or TypeCode.String) {
-            return ffmpeg.av_opt_set(node, key, string.Format(CultureInfo.InvariantCulture, "{0}", val), searchFlags);
-        }
-        if (val is Rational qw) {
-            return ffmpeg.av_opt_set_q(node, key, qw, searchFlags);
-        }
-        if (val is AVRational q) {
-            return ffmpeg.av_opt_set_q(node, key, q, searchFlags);
-        }
-        if (val is AVChannelLayout chl) {
-            return ffmpeg.av_opt_set_chlayout(node, key, &chl, searchFlags);
-        }
-        return ffmpeg.AVERROR_INVALIDDATA;
     }
 
     public MediaBufferSource AddAudioBufferSource(AudioFormat format, Rational timeBase)
@@ -172,7 +150,7 @@ public class MediaFilterArgs
     public List<MediaFilterNodePad> Inputs { get; set; } = new();
 
     /// <summary> List of arguments used to initialize the filter. Values must be number/string/bool/Rational/AVChannelLayout. </summary>
-    public List<(string Key, object Value)> Arguments { get; set; } = new();
+    public List<(string Key, OptionValue Value)> Arguments { get; set; } = new();
     public string? NodeName { get; set; }
 
     public HardwareDevice? HardwareDevice { get; set; }

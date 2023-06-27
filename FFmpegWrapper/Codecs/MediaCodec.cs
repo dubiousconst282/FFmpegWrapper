@@ -41,6 +41,9 @@ public unsafe readonly struct MediaCodec
 
     public MediaCodec(AVCodec* handle) => Handle = handle;
 
+    /// <summary> Returns a list of options accepted by this codec. </summary>
+    public IReadOnlyList<ContextOption> GetOptions() => ContextOption.GetOptions(&Handle->priv_class);
+
     public static MediaCodec GetEncoder(string name) => WrapChecked(ffmpeg.avcodec_find_encoder_by_name(name), 0, name);
     public static MediaCodec GetDecoder(string name) => WrapChecked(ffmpeg.avcodec_find_decoder_by_name(name), 0, name);
 
