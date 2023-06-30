@@ -49,6 +49,9 @@ public unsafe readonly struct MediaCodecParameters
     /// <inheritdoc cref="AVCodecParameters.sample_aspect_ratio" />
     public Rational PixelAspectRatio => Handle->sample_aspect_ratio;
 
+    public PictureFormat PictureFormat => new(Width, Height, PixelFormat, PixelAspectRatio);
+
+
     /// <inheritdoc cref="AVCodecParameters.field_order" />
     public AVFieldOrder FieldOrder => Handle->field_order;
 
@@ -91,8 +94,10 @@ public unsafe readonly struct MediaCodecParameters
     public int SeekPrerollSamples => Handle->seek_preroll;
 
     /// <inheritdoc cref="AVCodecParameters.ch_layout" />
-    public ref readonly AVChannelLayout ChannelLayout => ref Handle->ch_layout;
+    public ChannelLayout ChannelLayout => ChannelLayout.FromExisting(&Handle->ch_layout);
 
     public int NumChannels => Handle->ch_layout.nb_channels;
     public AVSampleFormat SampleFormat => (AVSampleFormat)Handle->format;
+
+    public AudioFormat AudioFormat => new(SampleFormat, SampleRate, ChannelLayout);
 }

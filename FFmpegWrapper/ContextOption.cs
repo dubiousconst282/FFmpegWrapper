@@ -31,7 +31,7 @@ public unsafe readonly struct ContextOption
         //The AVOption documentation says that AVClass options must be declared in
         //a static null terminated array, so this should be mostly fine.
         for (AVOption* opt = Handle + 1; opt->name != null; opt++) {
-            if (opt->type == AVOptionType.AV_OPT_TYPE_CONST && opt->unit == Handle->unit) {
+            if (opt->type == AV_OPT_TYPE_CONST && opt->unit == Handle->unit) {
                 list.Add(new ContextOption(opt));
             }
         }
@@ -78,7 +78,7 @@ public unsafe readonly struct ContextOption
 
         AVOption* opt = null;
         while ((opt = ffmpeg.av_opt_next(obj, opt)) != null) {
-            if (opt->type == AVOptionType.AV_OPT_TYPE_CONST) continue;
+            if (opt->type == AV_OPT_TYPE_CONST) continue;
 
             list.Add(new ContextOption(opt));
         }
@@ -120,7 +120,7 @@ public readonly struct OptionValue
     public static implicit operator OptionValue(long val) => new(val);
     public static implicit operator OptionValue(double val) => new(val);
     public static implicit operator OptionValue(Rational val) => new(val);
-    public static implicit operator OptionValue(AVChannelLayout val) => new(val);
+    public static implicit operator OptionValue(ChannelLayout val) => new(val);
     public static implicit operator OptionValue(AVPixelFormat val) => new(val);
     public static implicit operator OptionValue(AVSampleFormat val) => new(val);
 }

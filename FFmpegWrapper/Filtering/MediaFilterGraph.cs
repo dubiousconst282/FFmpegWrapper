@@ -149,7 +149,7 @@ public class MediaFilterArgs
     public MediaFilter Filter { get; set; }
     public List<MediaFilterNodePad> Inputs { get; set; } = new();
 
-    /// <summary> List of arguments used to initialize the filter. Values must be number/string/bool/Rational/AVChannelLayout. </summary>
+    /// <summary> List of arguments used to initialize the filter. </summary>
     public List<(string Key, OptionValue Value)> Arguments { get; set; } = new();
     public string? NodeName { get; set; }
 
