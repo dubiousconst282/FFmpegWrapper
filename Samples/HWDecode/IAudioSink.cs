@@ -16,5 +16,6 @@ public interface IAudioSink : IDisposable
     /// <summary> Blocks until the queued samples have been played and space is available. </summary>
     public void Wait();
 
-    public TimeSpan GetLatency();
+    /// <summary> Gets the current playhead position, in samples, since <see cref="Start"/> was called. </summary>
+    public long GetPosition();
 }

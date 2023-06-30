@@ -1,11 +1,9 @@
 using FFmpeg.Wrapper;
-using System.Text;
 
 using GL2O;
 
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using FFmpeg.AutoGen;
 using System.Diagnostics;
 
 //Recording OpenGL framebuffer using hardware encoder.
@@ -39,22 +37,21 @@ public unsafe class ShaderRecWindow : GameWindow
 
         var format = new PictureFormat(_width, _height, PixelFormats.NV12);
 
-        using var device = VideoEncoder.CreateCompatibleHardwareDevice(CodecIds.H264, format, out var hwConfig)
+        using var device = VideoEncoder.CreateCompatibleHardwareDevice(CodecIds.HEVC, format, out var hwConfig)
             ?? throw new InvalidOperationException("No compatible hardware encoder for the given settings");
 
         _encoder = new VideoEncoder(hwConfig, format, frameRate: 60, device);
 
-        if (_encoder.Codec.Name == "h264_qsv") {
-            _encoder.SetGlobalOption("global_quality", "28");
+        if (_encoder.Codec.Name == "h265_qsv") {
             _encoder.SetOption("preset", "veryslow");
-            _encoder.SetOption("look_ahead", "1");
         }
+        _encoder.SetGlobalOption("global_quality", "28");
 
         _muxer = new MediaMuxer(outVideoPath);
         _stream = _muxer.AddStream(_encoder);
         _muxer.Open();
 
-        _rgbFrame = new VideoFrame(format.Width, format.Height, PixelFormats.BGRA);
+        _rgbFrame = new VideoFrame(format.Width, format.Height, PixelFormats.RGBA);
         _frame = new VideoFrame(format);
         _scaler = new SwScaler(_rgbFrame.Format, format);
     }
@@ -90,7 +87,7 @@ public unsafe class ShaderRecWindow : GameWindow
 
         GL.Viewport(0, 0, _width, _height);
 
-        double time = _frameNo / ffmpeg.av_q2d(_encoder.FrameRate);
+        double time = _frameNo / (double)_encoder.FrameRate;
         int demoDuration = 5;
 
         //Encode some previously rendered frame
@@ -118,7 +115,7 @@ public unsafe class ShaderRecWindow : GameWindow
     {
         GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
         GL.BindBuffer(BufferTarget.PixelPackBuffer, _pbos[_frameNo % _pbos.Length].Id);
-        GL.ReadPixels(0, 0, _width, _height, PixelFormat.Bgra, PixelType.UnsignedByte, 0);
+        GL.ReadPixels(0, 0, _width, _height, PixelFormat.Rgba, PixelType.UnsignedByte, 0);
         GL.BindBuffer(BufferTarget.PixelPackBuffer, 0);
     }
     private void EncodeFrame()

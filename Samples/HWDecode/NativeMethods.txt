@@ -6,6 +6,7 @@ IMMDeviceEnumerator
 MMDeviceEnumerator
 IMMDevice
 IAudioClient
+IAudioClock
 IAudioRenderClient
 AUDCLNT_STREAMFLAGS_*
 

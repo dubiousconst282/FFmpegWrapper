@@ -21,6 +21,12 @@ public unsafe abstract class MediaFrame : FFObject
         set => Helpers.SetPTS(ref _frame->pts, value);
     }
 
+    /// <summary> Duration of the frame, in the same units as <see cref="PresentationTimestamp"/>. Null if unknown. </summary>
+    public long? Duration {
+        get => _frame->duration > 0 ? _frame->duration : null;
+        set => _frame->duration = value ?? 0;
+    }
+
     protected override void Free()
     {
         if (_frame != null && _ownsFrame) {

@@ -11,6 +11,7 @@ public unsafe class WasapiAudioSink : IAudioSink
 {
     IAudioClient* _client;
     IAudioRenderClient* _renderer;
+    IAudioClock* _clock;
     AutoResetEvent _event;
 
     public AudioFormat Format { get; }
@@ -27,6 +28,7 @@ public unsafe class WasapiAudioSink : IAudioSink
 
             IAudioClient* client;
             IAudioRenderClient* renderer;
+            IAudioClock* clock;
 
             device->Activate(IAudioClient.IID_Guid, CLSCTX.CLSCTX_INPROC_SERVER, null, out *(void**)&client);
 
@@ -42,9 +44,11 @@ public unsafe class WasapiAudioSink : IAudioSink
             client->SetEventHandle(_event.SafeWaitHandle);
 
             client->GetService(IAudioRenderClient.IID_Guid, out *(void**)&renderer);
+            client->GetService(IAudioClock.IID_Guid, out *(void**)&clock);
 
             _client = client;
             _renderer = renderer;
+            _clock = clock;
         } finally {
             CoTaskMemFree(actualFmt);
             if (device != null) device->Release();
@@ -108,7 +112,11 @@ public unsafe class WasapiAudioSink : IAudioSink
 
         return new Span<T>(buffer, (int)(availFrames * _bytesPerFrame / sizeof(T)));
     }
-    
+
+    //TODO: The documentation is very strict about ReleaseBuffer() needing to be called with exactly the same
+    //      amount of samples as in GetBuffer(). It seems to work fine with any value (at least in Win 11), 
+    //      but it could break at any point.
+    //      An Write()-like design would probably be more well-suited for a cross-platform API, at the cost of a small copy.
     public void AdvanceQueue(int numFramesWritten, bool replaceWithSilence = false)
     {
         _renderer->ReleaseBuffer((uint)numFramesWritten, replaceWithSilence ? 0x2u : 0u);
@@ -119,16 +127,18 @@ public unsafe class WasapiAudioSink : IAudioSink
         _event.WaitOne();
     }
 
-    public TimeSpan GetLatency()
+    public long GetPosition()
     {
-        _client->GetStreamLatency(out long ticks);
-        return TimeSpan.FromTicks(ticks);
+        _clock->GetFrequency(out ulong freq);
+        _clock->GetPosition(out ulong pos, null);
+        return (long)(pos * (uint)Format.SampleRate / freq);
     }
 
     public void Dispose()
     {
         if (_client != null) {
             _renderer->Release();
+            _clock->Release();
             _client->Release();
 
             _renderer = null;
