@@ -4,37 +4,36 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
-//Crude OpenGL video player using hardware accelerated decoding.
-//This supports audio playback via the Windows Audio Session API, but there's no
-//A/V synchronization or compensation, so they may drift or be badly synced in general.
+//Mini OpenGL video player using hardware accelerated decoding.
+//Features:
+// - Audio playback via the Windows Audio Session API 
+// - Crude A/V synchronization (video stream follows audio).
+// - HDR to SDR output (SMPTE 2084)
 public class PlayerWindow : NativeWindow
 {
     private MediaDemuxer _demuxer;
-    private List<StreamRenderer> _streams = new();
+    private VideoStreamRenderer _videoStream;
+    private AudioStreamRenderer _audioStream;
     private MediaPacket? _packet;
 
-    private PlayerClock RefClock => _streams[^1].Clock;
+    private PlayerClock _refClock => _audioStream.Clock;
 
     public PlayerWindow(string videoPath)
         : base(
             new NativeWindowSettings() {
-                Size = new(1280, 720), //use small window because fullscreen gets annoying during dev
                 Flags = ContextFlags.Debug | ContextFlags.ForwardCompatible,
                 APIVersion = new Version(4, 5),
-                Vsync = VSyncMode.On
+                Vsync = VSyncMode.On,
+                Size = Monitors.GetPrimaryMonitor().WorkArea.Size * 8 / 10
             })
     {
         _demuxer = new MediaDemuxer(videoPath);
 
         var videoStream = _demuxer.FindBestStream(MediaTypes.Video);
-        if (videoStream != null) {
-            _streams.Add(new VideoStreamRenderer(_demuxer, videoStream, Context));
-        }
+        _videoStream = new VideoStreamRenderer(_demuxer, videoStream!, Context);
 
         var audioStream = _demuxer.FindBestStream(MediaTypes.Audio);
-        if (audioStream != null) {
-            _streams.Add(new AudioStreamRenderer(_demuxer, audioStream));
-        }
+        _audioStream = new AudioStreamRenderer(_demuxer, audioStream!);
     }
 
     public unsafe void Run()
@@ -50,7 +49,10 @@ public class PlayerWindow : NativeWindow
             //Read input and fill-up packet queues
             while (true) {
                 if (_packet != null) {
-                    var renderer = _streams.Find(r => r.Stream.Index == _packet.StreamIndex);
+                    var renderer =
+                        _packet.StreamIndex == _videoStream.Stream.Index ? _videoStream :
+                        _packet.StreamIndex == _audioStream.Stream.Index ? _audioStream : null as StreamRenderer;
+                        
                     if (renderer != null && !renderer.EnqueuePacket(_packet)) break; //Queue is full
 
                     _packet = null;
@@ -62,17 +64,14 @@ public class PlayerWindow : NativeWindow
 
             OnResize(new ResizeEventArgs(ClientSize));
 
-            var refClock = _streams[^1].Clock;
             var interval = TimeSpan.FromMilliseconds(Context.SwapInterval);
-            
-            foreach (var stream in _streams) {
-                stream.Tick(refClock, ref interval);
-            }
 
-            var vst = _streams[0];
-            var ast = _streams[1];
+            _videoStream.Tick(_refClock, ref interval);
+            _audioStream.Tick(_refClock, ref interval);
 
-            Title = $"{RefClock.GetFrameTime()} A-V: {(vst.Clock.GetFrameTime() - ast.Clock.GetFrameTime()).TotalMilliseconds:0} {interval}";
+            var vtime = _videoStream.Clock.GetFrameTime();
+            var atime = _audioStream.Clock.GetFrameTime();
+            Title = $"{_refClock.GetFrameTime()} A-V: {(vtime - atime).TotalMilliseconds:0}";
 
             Thread.Sleep(interval);
         }
@@ -83,8 +82,8 @@ public class PlayerWindow : NativeWindow
     {
         base.OnResize(e);
 
-        var renderer = _streams.FirstOrDefault(r => r.Stream.Type == MediaTypes.Video)!;
-        var pars = renderer.Stream.CodecPars;
+        if (_videoStream == null) return;
+        var pars = _videoStream.Stream.CodecPars;
         
         double scale = Math.Min(e.Width / (double)pars.Width, e.Height / (double)pars.Height);
         int w = (int)Math.Round(pars.Width * scale);
@@ -109,24 +108,22 @@ public class PlayerWindow : NativeWindow
 
     private void SeekRelative(int secs)
     {
-        var newTime = RefClock.GetFrameTime() + TimeSpan.FromSeconds(secs);
+        var newTime = _refClock.GetFrameTime() + TimeSpan.FromSeconds(secs);
         Console.WriteLine("Seek to " + newTime);
 
         var opts = secs < 0 ? SeekOptions.Backward : SeekOptions.Forward;
 
         if (_demuxer.Seek(newTime, opts)) {
-            foreach (var stream in _streams) {
-                stream.Flush();
-            }
+            _videoStream.Flush();
+            _audioStream.Flush();
             _packet = null;
         }
     }
 
     private void OnUnload()
     {
-        foreach (var stream in _streams) {
-            stream.Dispose();
-        }
+        _videoStream.Dispose();
+        _audioStream.Dispose();
         _demuxer.Dispose();
     }
 }

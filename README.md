@@ -15,7 +15,7 @@ The easiest way to get started may be by looking at the code samples listed belo
 - [Extracting video frames](./Samples/FrameExtractor/Program.cs)
 - [Encoding generated audio and video](./Samples/AVEncode/Program.cs)
 - [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
-- [Hardware decoding and crude OpenGL player](./Samples/HWDecode/PlayerWindow.cs)
+- [Mini OpenGL player w/ hardware decoding](./Samples/GLPlayer/)
 - [Hardware encoding](./Samples/HWEncode/ShaderRecWindow.cs)
 - [Transcoding audio and video](./Samples/AVTranscode/Program.cs)
 - [Building and rendering filter graphs](./Samples/Filtering/Program.cs)

@@ -7,7 +7,7 @@ public abstract class StreamRenderer : IDisposable
     public MediaStream Stream { get; }
     protected MediaDecoder _decoder;
 
-    private Queue<MediaPacket> _packetQueue = new(64);
+    private Queue<MediaPacket> _packetQueue = new();
     public PlayerClock Clock { get; } = new();
 
     public StreamRenderer(MediaDemuxer demuxer, MediaStream stream)
@@ -18,7 +18,7 @@ public abstract class StreamRenderer : IDisposable
     
     public bool EnqueuePacket(MediaPacket packet)
     {
-        if (_packetQueue.Count < 64) {
+        if (_packetQueue.Count < 128) {
             _packetQueue.Enqueue(packet);
             return true;
         }

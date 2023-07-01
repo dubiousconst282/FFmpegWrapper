@@ -5,7 +5,7 @@ public class AudioStreamRenderer : StreamRenderer
     private SwResampler _resampler;
     private IAudioSink _sink;
     private AudioFrame _frame = new();
-    private long _framePos;
+    private TimeSpan _framePos;
 
     public AudioStreamRenderer(MediaDemuxer demuxer, MediaStream stream)
         : base(demuxer, stream)
@@ -26,14 +26,14 @@ public class AudioStreamRenderer : StreamRenderer
 
         while (_resampler.BufferedSamples < maxBufferedSamples && ReceiveFrame(_frame)) {
             _resampler.SendFrame(_frame);
-            _framePos = _frame.BestEffortTimestamp!.Value;
+            _framePos = Stream.GetTimestamp(_frame.BestEffortTimestamp ?? 0);
         }
 
         var playBuffer = _sink.GetQueueBuffer<byte>();
         int numSamples = _resampler.ReceiveFrame(playBuffer);
         _sink.AdvanceQueue(numSamples);
 
-        var pts = Rational.GetTimeSpan(_framePos - _resampler.BufferedSamples - numSamples, new Rational(1, _resampler.OutputFormat.SampleRate));
+        var pts = _framePos - Rational.GetTimeSpan(_resampler.BufferedSamples - numSamples, new Rational(1, _resampler.OutputFormat.SampleRate));
         Clock.SetFrameTime(pts);
     }
 
