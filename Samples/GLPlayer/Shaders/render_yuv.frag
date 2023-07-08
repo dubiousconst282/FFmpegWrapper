@@ -9,21 +9,21 @@ in vec2 v_FragCoord;
 out vec4 v_FragColor;
 
 
-const mat3 Yuv2Rgb_bt709 = transpose(mat3(
+const mat3 Yuv2Rgb_bt709 = mat3(
     1.0,  0.0000,  1.5748,
     1.0, -0.1873, -0.4681,
     1.0,  1.8556,  0.0000
-));
-const mat3 Yuv2Rgb_bt2020 = transpose(mat3(
+);
+const mat3 Yuv2Rgb_bt2020 = mat3(
     1.0,  0.0000,  1.4746,
     1.0, -0.1645, -0.5713,
     1.0,  1.8814,  0.0000
-));
-const mat3 GamutFix_bt2020to709 = transpose(mat3(
+);
+const mat3 GamutFix_bt2020to709 = mat3(
      1.6605, -0.5876, -0.0728,
     -0.1246,  1.1329, -0.0083,
     -0.0182, -0.1006,  1.1187
-));
+);
 
 //https://github.com/VoidXH/Cinema-Shader-Pack/blob/master/Shaders/HDR%20to%20SDR.hlsl
 const float peakLuminance = 250.0; // Peak playback screen luminance in nits
@@ -62,11 +62,11 @@ void main() {
     vec3 col;
 
     if (u_ConvertHDRtoSDR) {
-        col = pq2lin(Yuv2Rgb_bt2020 * yuv);
-        col = lin2srgb(GamutFix_bt2020to709 * col);
+        col = pq2lin(yuv * Yuv2Rgb_bt2020);
+        col = lin2srgb(col * GamutFix_bt2020to709);
        // col = col + (hash(v_FragCoord) - 0.5) * (0.5 / 255.0); //dither
     } else {
-        col = Yuv2Rgb_bt709 * yuv;
+        col = yuv * Yuv2Rgb_bt709;
     }
 
     v_FragColor = vec4(col, 1.0);

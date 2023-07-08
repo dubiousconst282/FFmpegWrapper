@@ -1,7 +1,7 @@
 namespace GL2O;
 
 /// <summary> Represents a shader program. </summary>
-public class ShaderProgram : GLObject
+public class ShaderProgram
 {
     public int Id { get; private set; }
     public string? Name { get; set; }

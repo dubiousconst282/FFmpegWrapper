@@ -2,7 +2,7 @@ namespace GL2O;
 
 using System.Reflection;
 
-public class VertexFormat : GLObject
+public class VertexFormat
 {
     public int Id { get; private set; }
     public int Stride { get; }

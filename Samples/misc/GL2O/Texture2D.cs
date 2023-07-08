@@ -1,6 +1,6 @@
 namespace GL2O;
 
-public class Texture2D : GLObject
+public class Texture2D
 {
     public int Id { get; private set; }
 

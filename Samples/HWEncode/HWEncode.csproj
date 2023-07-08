@@ -8,8 +8,8 @@
 
     <Compile Include="../misc/GL2O/**/*.cs" />
 
-    <Content Include="../misc/shaders/**/*.*">
-      <Link>shaders/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    <Content Include="Shaders/**/*.*">
+      <Link>Shaders/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

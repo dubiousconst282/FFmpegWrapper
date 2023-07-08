@@ -40,8 +40,6 @@ public abstract class StreamRenderer : IDisposable
         }
     }
 
-    public abstract void Tick(PlayerClock refClock, ref TimeSpan tickInterval);
-
     /// <summary> Flush decoder and buffered frames. </summary>
     public virtual void Flush()
     {

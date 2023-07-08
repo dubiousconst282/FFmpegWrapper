@@ -20,7 +20,7 @@ public class AudioStreamRenderer : StreamRenderer
         _sink.Start();
     }
 
-    public override void Tick(PlayerClock refClock, ref TimeSpan tickInterval)
+    public void Tick(PlayerClock refClock)
     {
         int maxBufferedSamples = _resampler.OutputFormat.SampleRate * 5;
 

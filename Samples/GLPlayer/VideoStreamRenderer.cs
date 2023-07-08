@@ -37,7 +37,7 @@ public class VideoStreamRenderer : StreamRenderer
         //https://en.wikipedia.org/wiki/Perceptual_quantizer
         _isHDR = stream.CodecPars.ColorTrc == FFmpeg.AutoGen.AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084;
 
-        string shaderBasePath = AppContext.BaseDirectory + "shaders/";
+        string shaderBasePath = AppContext.BaseDirectory + "Shaders/";
         _shader = new ShaderProgram();
         _shader.AttachFile(ShaderType.VertexShader, shaderBasePath + "full_screen_quad.vert");
         _shader.AttachFile(ShaderType.FragmentShader, shaderBasePath + "render_yuv.frag");
@@ -49,7 +49,7 @@ public class VideoStreamRenderer : StreamRenderer
         _glfw = glfw;
     }
 
-    public override void Tick(PlayerClock refClock, ref TimeSpan tickInterval)
+    public void Tick(PlayerClock refClock)
     {
         bool gotFrame = false;
 
@@ -67,7 +67,7 @@ public class VideoStreamRenderer : StreamRenderer
 
             //Console.WriteLine($"Ref={refTime} {(currTime - refTime).TotalMilliseconds:0} C={Clock.FramePts} N={nextPts} {timeLeft.TotalMilliseconds:0.0}");
 
-            if (timeLeft > tickInterval && !_flushed) break;
+            if (timeLeft > TimeSpan.FromSeconds(1.0/60) && !_flushed) break;
 
             gotFrame = true;
             _hasFrame = false;
@@ -89,7 +89,6 @@ public class VideoStreamRenderer : StreamRenderer
             _shader.DrawArrays(PrimitiveType.Triangles, _emptyVao, _emptyVbo, 0, 3);
 
             _glfw.SwapBuffers();
-            tickInterval = TimeSpan.Zero;
         }
     }
 
@@ -114,7 +113,7 @@ public class VideoStreamRenderer : StreamRenderer
             PixelFormats.P010LE => (PixelType.UnsignedShort, 2)
         };
 
-        bool highDepth = pixelStride == 2;
+        bool highDepth = pixelStride == 2; //Don't downscale high bit-depth formats, otherwise we could end with ugly banding
 
         _texY ??= new Texture2D(frame.Width, frame.Height, 1, highDepth ? SizedInternalFormat.R16 : SizedInternalFormat.R8);
         _texUV ??= new Texture2D(frame.Width / 2, frame.Height / 2, 1, highDepth ? SizedInternalFormat.Rg16 : SizedInternalFormat.Rg8);

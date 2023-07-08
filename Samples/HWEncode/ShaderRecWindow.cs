@@ -60,7 +60,7 @@ public unsafe class ShaderRecWindow : GameWindow
     {
         base.OnLoad();
 
-        string shaderBasePath = AppContext.BaseDirectory + "shaders/";
+        string shaderBasePath = AppContext.BaseDirectory + "Shaders/";
 
         foreach (string file in Directory.GetFiles(shaderBasePath + "shadertoy/", "*.frag")) {
             Console.WriteLine("Loading shader " + Path.GetFileName(file));

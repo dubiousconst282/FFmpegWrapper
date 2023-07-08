@@ -23,7 +23,6 @@ public class PlayerWindow : NativeWindow
             new NativeWindowSettings() {
                 Flags = ContextFlags.Debug | ContextFlags.ForwardCompatible,
                 APIVersion = new Version(4, 5),
-                Vsync = VSyncMode.On,
                 Size = Monitors.GetPrimaryMonitor().WorkArea.Size * 8 / 10
             })
     {
@@ -64,16 +63,14 @@ public class PlayerWindow : NativeWindow
 
             OnResize(new ResizeEventArgs(ClientSize));
 
-            var interval = TimeSpan.FromMilliseconds(Context.SwapInterval);
-
-            _videoStream.Tick(_refClock, ref interval);
-            _audioStream.Tick(_refClock, ref interval);
+            _videoStream.Tick(_refClock);
+            _audioStream.Tick(_refClock);
 
             var vtime = _videoStream.Clock.GetFrameTime();
             var atime = _audioStream.Clock.GetFrameTime();
             Title = $"{_refClock.GetFrameTime()} A-V: {(vtime - atime).TotalMilliseconds:0}";
 
-            Thread.Sleep(interval);
+            Thread.Sleep(1);
         }
         OnUnload();
     }

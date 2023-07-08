@@ -1,6 +1,6 @@
 namespace GL2O;
 
-public unsafe class BufferObject : GLObject
+public unsafe class BufferObject
 {
     public int Id { get; private set; }
 
