@@ -177,8 +177,11 @@ public unsafe class MediaMuxer : FFObject
     {
         if (_ctx != null) {
             ffmpeg.av_write_trailer(_ctx);
-            ffmpeg.avio_closep(&_ctx->pb);
-            
+
+            if (IOC == null) {
+                ffmpeg.avio_closep(&_ctx->pb);
+            }
+
             ffmpeg.avformat_free_context(_ctx);
             _ctx = null;
 

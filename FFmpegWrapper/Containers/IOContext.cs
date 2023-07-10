@@ -101,8 +101,7 @@ public abstract unsafe class IOContext : FFObject
     protected override void Free()
     {
         if (_ctx != null) {
-            ffmpeg.av_freep(&_ctx->buffer);
-            fixed (AVIOContext** c = &_ctx) ffmpeg.avio_context_free(c);
+            fixed (AVIOContext** c = &_ctx) ffmpeg.avio_closep(c);
         }
     }
     protected void ThrowIfDisposed()
