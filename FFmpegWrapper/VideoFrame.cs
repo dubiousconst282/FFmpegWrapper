@@ -1,4 +1,4 @@
-﻿namespace FFmpeg.Wrapper;
+namespace FFmpeg.Wrapper;
 
 public unsafe class VideoFrame : MediaFrame
 {
@@ -6,7 +6,17 @@ public unsafe class VideoFrame : MediaFrame
     public int Height => _frame->height;
     public AVPixelFormat PixelFormat => (AVPixelFormat)_frame->format;
 
-    public PictureFormat Format => new PictureFormat(Width, Height, PixelFormat, _frame->sample_aspect_ratio);
+    public PictureFormat Format => new(Width, Height, PixelFormat, _frame->sample_aspect_ratio);
+    public PictureColorspace Colorspace {
+        get => new(_frame->colorspace, _frame->color_primaries, _frame->color_trc, _frame->color_range);
+        set {
+            ThrowIfDisposed();
+            _frame->colorspace = value.Matrix;
+            _frame->color_primaries = value.Primaries;
+            _frame->color_trc = value.Transfer;
+            _frame->color_range = value.Range;
+        }
+    }
 
     /// <summary> Pointers to the pixel data planes. </summary>
     /// <remarks> These can point to the end of image data when used in combination with negative values in <see cref="RowSize"/>. </remarks>
@@ -212,7 +222,10 @@ public unsafe class VideoFrame : MediaFrame
         encoder.Open();
 
         using var tempFrame = new VideoFrame(encoder.FrameFormat);
+        tempFrame.Colorspace = Colorspace;
+
         using var sws = new SwScaler(Format, tempFrame.Format);
+        sws.SetColorspace(this.Colorspace, tempFrame.Colorspace);
         sws.Convert(this, tempFrame);
         encoder.SendFrame(tempFrame);
 

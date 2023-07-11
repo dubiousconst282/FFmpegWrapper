@@ -18,9 +18,21 @@ public unsafe class VideoEncoder : MediaEncoder
     public PictureFormat FrameFormat {
         get => new(Width, Height, PixelFormat, _ctx->sample_aspect_ratio);
         set {
+            ThrowIfOpen();
             _ctx->width = value.Width;
             _ctx->height = value.Height;
             _ctx->pix_fmt = value.PixelFormat;
+        }
+    }
+
+    public PictureColorspace Colorspace {
+        get => new(_ctx->colorspace, _ctx->color_primaries, _ctx->color_trc, _ctx->color_range);
+        set {
+            ThrowIfOpen();
+            _ctx->colorspace = value.Matrix;
+            _ctx->color_primaries = value.Primaries;
+            _ctx->color_trc = value.Transfer;
+            _ctx->color_range = value.Range;
         }
     }
 

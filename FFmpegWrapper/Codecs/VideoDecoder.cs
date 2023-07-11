@@ -7,6 +7,7 @@ public unsafe class VideoDecoder : MediaDecoder
     public AVPixelFormat PixelFormat => _ctx->pix_fmt;
 
     public PictureFormat FrameFormat => new(Width, Height, PixelFormat, _ctx->sample_aspect_ratio);
+    public PictureColorspace Colorspace => new(_ctx->colorspace, _ctx->color_primaries, _ctx->color_trc, _ctx->color_range);
 
     public VideoDecoder(AVCodecID codecId)
         : this(MediaCodec.GetDecoder(codecId)) { }

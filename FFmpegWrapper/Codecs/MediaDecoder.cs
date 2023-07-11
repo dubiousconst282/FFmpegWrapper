@@ -5,13 +5,19 @@ public abstract unsafe class MediaDecoder : CodecBase
     public MediaDecoder(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
         : base(ctx, expectedType, takeOwnership) { }
 
-    public void SendPacket(MediaPacket? pkt)
+    public void SendPacket(MediaPacket? packet)
     {
-        var result = (LavResult)ffmpeg.avcodec_send_packet(Handle, pkt == null ? null : pkt.Handle);
+        var result = TrySendPacket(packet);
 
-        if (result != LavResult.Success && !(result == LavResult.EndOfFile && pkt == null)) {
-            result.ThrowIfError("Could not decode packet (hints: check if the decoder is open, try receiving frames first)");
+        if (result != LavResult.Success && !(result == LavResult.EndOfFile && packet == null)) {
+            result.ThrowIfError("Could not decode packet");
         }
+    }
+
+    /// <inheritdoc cref="ffmpeg.avcodec_send_packet(AVCodecContext*, AVPacket*)"/>
+    public LavResult TrySendPacket(MediaPacket? packet)
+    {
+        return (LavResult)ffmpeg.avcodec_send_packet(Handle, packet == null ? null : packet.Handle);
     }
 
     public bool ReceiveFrame(MediaFrame frame)

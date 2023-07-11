@@ -22,7 +22,33 @@ public unsafe class SwScaler : FFObject
         _ctx = ffmpeg.sws_getContext(inFmt.Width, inFmt.Height, inFmt.PixelFormat,
                                      outFmt.Width, outFmt.Height, outFmt.PixelFormat,
                                      (int)flags, null, null, null);
+        if (_ctx == null) {
+            throw new OutOfMemoryException();
+        }
     }
+
+    /// <summary> Sets the input and output matrices to be used for YUV conversion. </summary>
+    /// <remarks> Color transfer functions are ignored by swscale. Use the colorspace filter instead. </remarks>
+    public void SetColorspace(in PictureColorspace input, in PictureColorspace output)
+    {
+        ThrowIfDisposed();
+        int* table, invTable;
+        int srcRange, dstRange, brightness, contrast, saturation;
+        ffmpeg.sws_getColorspaceDetails(_ctx, &invTable, &srcRange, &table, &dstRange, &brightness, &contrast, &saturation);
+
+        table = ffmpeg.sws_getCoefficients((int)input.Matrix);
+        invTable = ffmpeg.sws_getCoefficients((int)output.Matrix);
+
+        if (input.Range != AVColorRange.AVCOL_RANGE_UNSPECIFIED) {
+            srcRange = input.Range == AVColorRange.AVCOL_RANGE_JPEG ? 1 : 0;
+        }
+        if (output.Range != AVColorRange.AVCOL_RANGE_UNSPECIFIED) {
+            dstRange = output.Range == AVColorRange.AVCOL_RANGE_JPEG ? 1 : 0;
+        }
+
+        ffmpeg.sws_setColorspaceDetails(_ctx, in *(int_array4*)invTable, srcRange, in *(int_array4*)table, dstRange, brightness, contrast, saturation);
+    }
+
     public void Convert(VideoFrame src, VideoFrame dst)
     {
         Convert(src.Handle, dst.Handle);
@@ -31,7 +57,7 @@ public unsafe class SwScaler : FFObject
     {
         CheckFrame(src, InputFormat, input: true);
         CheckFrame(dst, OutputFormat, input: false);
-        ffmpeg.sws_scale(Handle, src->data, src->linesize, 0, src->height, dst->data, dst->linesize);
+        ffmpeg.sws_scale_frame(_ctx, dst, src).CheckError();
     }
 
     /// <summary> Converts and rescales <paramref name="src"/> into the given frame. The input pixel format must be interleaved. </summary>
@@ -42,7 +68,7 @@ public unsafe class SwScaler : FFObject
         CheckFrame(dst.Handle, OutputFormat, input: false);
 
         fixed (byte* pSrc = src) {
-            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { stride }, 0, dst.Height, dst.Handle->data, dst.Handle->linesize);
+            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { stride }, 0, dst.Height, dst.Handle->data, dst.Handle->linesize).CheckError();
         }
     }
 
@@ -54,7 +80,7 @@ public unsafe class SwScaler : FFObject
         CheckBuffer(dst, stride, OutputFormat, input: false);
         
         fixed (byte* pDst = dst) {
-            ffmpeg.sws_scale(Handle, src.Handle->data, src.Handle->linesize, 0, src.Height, new[] { pDst }, new[] { stride });
+            ffmpeg.sws_scale(Handle, src.Handle->data, src.Handle->linesize, 0, src.Height, new[] { pDst }, new[] { stride }).CheckError();
         }
     }
 
@@ -68,7 +94,7 @@ public unsafe class SwScaler : FFObject
 
         fixed (byte* pSrc = src)
         fixed (byte* pDst = dst) {
-            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { srcStride }, 0, InputFormat.Height, new[] { pDst }, new[] { dstStride });
+            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { srcStride }, 0, InputFormat.Height, new[] { pDst }, new[] { dstStride }).CheckError();
         }
     }
 
@@ -102,6 +128,7 @@ public unsafe class SwScaler : FFObject
         }
     }
 }
+
 public enum InterpolationMode
 {
     FastBilinear    = ffmpeg.SWS_FAST_BILINEAR,
@@ -112,5 +139,12 @@ public enum InterpolationMode
     Gaussian        = ffmpeg.SWS_GAUSS,
     Sinc            = ffmpeg.SWS_SINC,
     Lanczos         = ffmpeg.SWS_LANCZOS,
-    Spline          = ffmpeg.SWS_SPLINE
+    Spline          = ffmpeg.SWS_SPLINE,
+
+    /// <summary> Flag: Prioritize quality over speed. This sets ACCURATE_RND, BITEXACT, and FULL_CHR_H_INT. </summary>
+    /// <remarks> See https://stackoverflow.com/a/70894724 for details on the meaning of these flags. </remarks>
+    HighQuality     = ffmpeg.SWS_ACCURATE_RND | ffmpeg.SWS_BITEXACT | ffmpeg.SWS_FULL_CHR_H_INT,
+
+    /// <summary> Flag: Always interpolate chroma channels when upsampling. </summary>
+    InterpolateChroma = ffmpeg.SWS_FULL_CHR_H_INT,
 }

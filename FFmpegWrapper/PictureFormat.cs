@@ -48,8 +48,7 @@ public readonly struct PictureFormat : IEquatable<PictureFormat>
 
     public override string ToString()
     {
-        var fmt = PixelFormat.ToString().Substring("AV_PIX_FMT_".Length);
-        return $"{Width}x{Height} {fmt}";
+        return $"{Width}x{Height} {ffmpeg.av_get_pix_fmt_name(PixelFormat)}";
     }
 
     public bool Equals(PictureFormat other) =>
@@ -61,22 +60,27 @@ public readonly struct PictureFormat : IEquatable<PictureFormat>
     public override int GetHashCode() => (Width, Height, (int)PixelFormat).GetHashCode();
 }
 
-//TODO: expose colorspace stuff
-/*
-public readonly struct ColorspaceParams
+/// <summary> Contains colorspace information. https://trac.ffmpeg.org/wiki/colorspace </summary>
+public readonly struct PictureColorspace
 {
-    public AVColorSpace Colorspace { get; }
+    public AVColorSpace Matrix { get; }
     public AVColorPrimaries Primaries { get; }
-    public AVColorTransferCharacteristic TransferChars { get; }
+    public AVColorTransferCharacteristic Transfer { get; }
     public AVColorRange Range { get; }
-    public AVChromaLocation ChromaLocation { get; }
 
-    public ColorspaceParams(AVColorSpace colorspace, AVColorPrimaries primaries, AVColorTransferCharacteristic transferChars, AVColorRange range, AVChromaLocation chromaLocation)
+    public PictureColorspace(AVColorSpace matrix, AVColorPrimaries primaries, AVColorTransferCharacteristic trc, AVColorRange range)
     {
-        Colorspace = colorspace;
+        Matrix = matrix;
         Primaries = primaries;
-        TransferChars = transferChars;
+        Transfer = trc;
         Range = range;
-        ChromaLocation = chromaLocation;
     }
-}*/
+
+    //TODO: Expose stuff from https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/csp.h
+    //      This colorspace stuff seems like a nightmare to deal with, and there's still crap like HDR+ to make it even worse.
+
+    public override string ToString()
+    {
+        return $"{ffmpeg.av_color_range_name(Range)}, {ffmpeg.av_color_space_name(Matrix)}/{ffmpeg.av_color_primaries_name(Primaries)}/{ffmpeg.av_color_transfer_name(Transfer)}";
+    }
+}
