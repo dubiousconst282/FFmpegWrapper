@@ -5,7 +5,7 @@ public unsafe class MediaBufferSource : MediaFilterNode
     internal MediaBufferSource(AVFilterContext* handle)
         : base(handle) { }
 
-    public void WriteFrame(MediaFrame? frame)
+    public void SendFrame(MediaFrame? frame)
     {
         ffmpeg.av_buffersrc_write_frame(Handle, frame == null ? null : frame.Handle).CheckError();
     }

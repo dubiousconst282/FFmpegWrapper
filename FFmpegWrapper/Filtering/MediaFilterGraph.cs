@@ -1,6 +1,6 @@
 namespace FFmpeg.Wrapper;
 
-using System.Globalization;
+using System.Text;
 
 public unsafe class MediaFilterGraph : FFObject
 {
@@ -89,16 +89,16 @@ public unsafe class MediaFilterGraph : FFObject
         }
     }
 
-    public AudioBufferSink AddAudioBufferSink(MediaFilterNodePad input)
+    public AudioBufferSink AddAudioBufferSink(MediaFilterNodePort input)
     {
         return new AudioBufferSink(AddBufferSink(input, "abuffersink"));
     }
-    public VideoBufferSink AddVideoBufferSink(MediaFilterNodePad input)
+    public VideoBufferSink AddVideoBufferSink(MediaFilterNodePort input)
     {
         return new VideoBufferSink(AddBufferSink(input, "buffersink"));
     }
 
-    private AVFilterContext* AddBufferSink(MediaFilterNodePad input, string filterName)
+    private AVFilterContext* AddBufferSink(MediaFilterNodePort input, string filterName)
     {
         ThrowIfConfigured();
 
@@ -106,6 +106,47 @@ public unsafe class MediaFilterGraph : FFObject
         ffmpeg.avfilter_init_str(node, null).CheckError("Failed to initialize buffer sink node");
         ffmpeg.avfilter_link(input.Node.Handle, (uint)input.Index, node, 0).CheckError("Failed to link input node to buffer sink");
         return node;
+    }
+
+    /// <summary> Parses and initializes a graph segment described by the given string. </summary>
+    /// <returns> A map of named outputs from the segment. </returns>
+    public Dictionary<string, MediaFilterNodePort> Parse(string str, params (string Name, MediaFilterNodePort)[] inputs)
+    {
+        ThrowIfConfigured();
+
+        AVFilterInOut* inputLinks = null;
+        AVFilterInOut* outputLinks = null;
+
+        try {
+            foreach (var (name, port) in inputs) {
+                var link = ffmpeg.avfilter_inout_alloc();
+
+                link->name = ffmpeg.av_strdup(name);
+                link->filter_ctx = port.Node.Handle;
+                link->pad_idx = port.Index;
+                link->next = inputLinks;
+
+                inputLinks = link;
+            }
+            //This function names inputs/outputs pars to the caller's perspective,
+            //so output[i] is actually the input of some parsed node.
+            ffmpeg.avfilter_graph_parse_ptr(_ctx, str, &outputLinks, &inputLinks, null).CheckError("Failed to parse filter graph");
+
+            if (outputLinks != null) {
+                throw new InvalidOperationException("Parsed filter graph cannot have open inputs");
+            }
+            var outputs = new Dictionary<string, MediaFilterNodePort>();
+
+            for (AVFilterInOut* link = inputLinks; link != null; link = link->next) {
+                string name = Helpers.PtrToStringUTF8(link->name)!;
+                var node = new MediaFilterNode(link->filter_ctx); //TODO: handle buffer sinks and other derived nodes
+                outputs.Add(name, new MediaFilterNodePort(node, link->pad_idx));
+            }
+            return outputs;
+        } finally {
+            ffmpeg.avfilter_inout_free(&inputLinks);
+            ffmpeg.avfilter_inout_free(&outputLinks);
+        }
     }
 
     public void SetOption(string name, string value)
@@ -120,6 +161,66 @@ public unsafe class MediaFilterGraph : FFObject
 
         ffmpeg.avfilter_graph_config(_ctx, null).CheckError();
         IsConfigured = true;
+    }
+
+    public override string ToString()
+    {
+        if (_ctx == null) {
+            return base.ToString();
+        }
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < _ctx->nb_filters; i++) {
+            if (i != 0) sb.Append(",");
+            
+            var node = _ctx->filters[i];
+
+            //Input ports
+            for (int j = 0; j < node->nb_inputs; j++) {
+                AVFilterLink* link = node->inputs[j];
+
+                int srcNodeIdx = 0;
+                int srcPortIdx = (int)(link->srcpad - link->src->output_pads);
+
+                while (srcNodeIdx < _ctx->nb_filters && _ctx->filters[srcNodeIdx] != link->src) {
+                    srcNodeIdx++;
+                }
+                PrintPort(srcNodeIdx, srcPortIdx);
+            }
+            //Filter name
+            sb.Append(Helpers.PtrToStringUTF8(node->filter->name));
+            if (node->name != null) {
+                sb.Append($"@{Helpers.PtrToStringUTF8(node->name)}");
+            }
+
+            //Options
+            var displayOpts = ContextOption.GetDisplayOptions(node->priv, skipDefaults: true);
+
+            for (int j = 0; j < displayOpts.Count; j++) {
+                var opt = displayOpts[j];
+
+                sb.Append(j == 0 ? '=' : ':');
+                sb.Append(opt.Name).Append("=");
+                sb.Append(ContextOption.GetAsString(node->priv, opt.Name, searchChildren: false));
+            }
+
+            //Outputs
+            for (int j = 0; j < node->nb_outputs; j++) {
+                PrintPort(i, j);
+            }
+        }
+        return sb.ToString();
+
+        void PrintPort(int nodeIdx, int portIdx)
+        {
+            sb.Append("[");
+            do {
+                sb.Append((char)('A' + (nodeIdx % 26)));
+                nodeIdx /= 26;
+            } while (nodeIdx != 0);
+
+            sb.Append(portIdx + "]");
+        }
     }
 
     protected override void Free()
@@ -147,7 +248,7 @@ public unsafe class MediaFilterGraph : FFObject
 public class MediaFilterArgs
 {
     public MediaFilter Filter { get; set; }
-    public List<MediaFilterNodePad> Inputs { get; set; } = new();
+    public List<MediaFilterNodePort> Inputs { get; set; } = new();
 
     /// <summary> List of arguments used to initialize the filter. </summary>
     public List<(string Key, OptionValue Value)> Arguments { get; set; } = new();
@@ -167,22 +268,22 @@ public unsafe class MediaFilterNode
     public string? Name => Helpers.PtrToStringUTF8(Handle->name);
     public MediaFilter Filter => new(Handle->filter);
 
-    public MediaFilterNodePad GetOutput(int index)
+    public MediaFilterNodePort GetOutput(int index)
     {
         if (index < 0 || index >= Handle->nb_outputs) {
             throw new ArgumentOutOfRangeException();
         }
-        return new MediaFilterNodePad(this, index);
+        return new MediaFilterNodePort(this, index);
     }
 
     internal MediaFilterNode(AVFilterContext* handle) => Handle = handle;
 }
-public readonly struct MediaFilterNodePad
+public readonly struct MediaFilterNodePort
 {
     public MediaFilterNode Node { get; }
     public int Index { get; }
 
-    public MediaFilterNodePad(MediaFilterNode node, int index)
+    public MediaFilterNodePort(MediaFilterNode node, int index)
     {
         Node = node;
         Index = index;

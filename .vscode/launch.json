@@ -43,11 +43,11 @@
             "stopAtEntry": false
         },
         {
-            "name": "Launch HWDecode",
+            "name": "Launch GLPlayer",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Samples/build/Debug/HWDecode.dll",
+            "program": "${workspaceFolder}/Samples/build/Debug/GLPlayer.dll",
             "args": [
                 "sample.mp4"
             ],
@@ -78,6 +78,17 @@
                 "sample.mp4",
                 "transcoded.mkv"
             ],
+            "cwd": "${workspaceFolder}/logs",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch Filtering",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Samples/build/Debug/Filtering.dll",
+            "args": [ ],
             "cwd": "${workspaceFolder}/logs",
             "console": "internalConsole",
             "stopAtEntry": false

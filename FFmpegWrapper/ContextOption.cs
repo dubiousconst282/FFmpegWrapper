@@ -15,6 +15,9 @@ public unsafe readonly struct ContextOption
     public double MinValue => Handle->min;
     public double MaxValue => Handle->max;
 
+    /// <summary> Offset to the field containing this option, relative to the object pointer. </summary>
+    public int Offset => Handle->offset;
+
     //TODO: Expose Option.DefaultValue
     //public OptionValue? DefaultValue => throw new NotImplementedException();
 
@@ -71,6 +74,19 @@ public unsafe readonly struct ContextOption
         }
     }
 
+    /// <summary> Gets the value of an option in <paramref name="obj"/> as a string. </summary>
+    public static string? GetAsString(void* obj, string name, bool searchChildren)
+    {
+        int flags = searchChildren ? ffmpeg.AV_OPT_SEARCH_CHILDREN : 0;
+
+        byte* value;
+        ffmpeg.av_opt_get(obj, name, flags, &value);
+
+        string? str = Helpers.PtrToStringUTF8(value);
+        ffmpeg.av_free(value);
+        return str;
+    }
+
     /// <summary> Returns a list of options accepted by the specified ffmpeg object. See <see cref="ffmpeg.av_opt_next"/>. </summary>
     public static IReadOnlyList<ContextOption> GetOptions(void* obj)
     {
@@ -83,6 +99,48 @@ public unsafe readonly struct ContextOption
             list.Add(new ContextOption(opt));
         }
         return list;
+    }
+
+    /// <summary> Returns a list of options accepted by the specified ffmpeg object, skipping aliases and equivalents. </summary>
+    /// <param name="skipDefaults"> Skip options whose value in <paramref name="obj"/> are set to default. </param>
+    public static IReadOnlyList<ContextOption> GetDisplayOptions(void* obj, bool skipDefaults = false)
+    {
+        var opts = new List<ContextOption>();
+
+        AVOption* iter = null;
+        while ((iter = ffmpeg.av_opt_next(obj, iter)) != null) {
+            if (iter->type == AV_OPT_TYPE_CONST || (skipDefaults && ffmpeg.av_opt_is_set_to_default(obj, iter) != 0)) continue;
+
+            opts.Add(new ContextOption(iter));
+        }
+
+        opts.Sort((a, b) => a.Offset - b.Offset);
+
+        int nextIgnoredOffset = -1;
+        int j = 0;
+
+        for (int i = 0; i < opts.Count; i++) {
+            var opt = opts[i];
+
+            while (i + 1 < opts.Count && opts[i + 1].Offset == opt.Offset) {
+                var aliasOpt = opts[i + 1];
+
+                if (aliasOpt.Type == AVOptionType.AV_OPT_TYPE_IMAGE_SIZE || aliasOpt.Name.Length > opt.Name.Length) {
+                    opt = aliasOpt;
+                }
+                i++;
+            }
+
+            if (opt.Offset == nextIgnoredOffset) continue;
+
+            if (opt.Type == AVOptionType.AV_OPT_TYPE_IMAGE_SIZE) {
+                nextIgnoredOffset = opt.Offset + 4; //Ignore next height option
+            }
+            opts[j++] = opt;
+        }
+        
+        opts.RemoveRange(j, opts.Count - j);
+        return opts;
     }
 
     public override string ToString() => Name + ": " + Type.ToString().ToLower().Substring("AV_OPT_TYPE_".Length);

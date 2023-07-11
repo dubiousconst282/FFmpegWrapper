@@ -1,12 +1,13 @@
 ﻿using FFmpeg.Wrapper;
 
 //Create a filter graph equivalent to the following command:
-//ffplay -f lavfi -i ddagrab=draw_mouse=1:framerate=60,hwdownload,format=bgra,scale,format=yuv444p,mestimate=method=epzs,codecview=mvt=fp
+//ffplay -f lavfi -i ddagrab=draw_mouse=1:framerate=60,hwdownload,format=bgra,scale,format=yuv420p,mestimate=method=epzs,codecview=mvt=fp
 
 using var graph = new MediaFilterGraph();
 
 using var device = HardwareDevice.Create(HWDeviceTypes.D3D11VA);
 
+//Programatic creation of nodes
 var sourceNode = 
     graph.AddNode(new() {
         FilterName = "ddagrab",
@@ -16,50 +17,27 @@ var sourceNode =
         },
         HardwareDevice = device
     });
-
-var downloadNode = 
+var downloadNode =
     graph.AddNode(new() {
-        FilterName = "hwdownload", 
+        FilterName = "hwdownload",
         Inputs = { sourceNode.GetOutput(0) }
     });
 
+//Parsing conventional filters
+//
 //Note that "format" nodes are somewhat misleading, they will _not_ convert pixel formats, only ensure that
 //it output matches the specified format iff the input node also supports it.
-var convertNode =
-    graph.AddNode(new() {
-        FilterName = "format",
-        Inputs = { downloadNode.GetOutput(0) },
-        Arguments = { ("pix_fmts", "bgra") }
-    });
+string filters = @"
+    [in]
+    format = bgra,
+    scale = w=iw*0.8 : h=ih*0.8,
+    format = yuv420p,
+    mestimate = method=epzs : mb_size=32 : search_param=15,
+    codecview = mv_type=fp
+    [out]";
+var parsedSegment = graph.Parse(filters, ("in", downloadNode.GetOutput(0)));
 
-var scaleNode =
-    graph.AddNode(new() {
-        FilterName = "scale",
-        Inputs = { convertNode.GetOutput(0) },
-        Arguments = { ("w", "iw*0.8"), ("h","ih*0.8") }
-    });
-var convertNode2 =
-    graph.AddNode(new() {
-        FilterName = "format",
-        Inputs = { scaleNode.GetOutput(0) },
-        Arguments = { ("pix_fmts", "yuv444p") }
-    });
-
-var mestimateNode =
-    graph.AddNode(new() {
-        FilterName = "mestimate",
-        Inputs = { convertNode2.GetOutput(0) },
-        Arguments = { ("method", "epzs"), ("mb_size", 32), ("search_param", 15) }
-    });
-var codecviewNode =
-    graph.AddNode(new() {
-        FilterName = "codecview",
-        Inputs = { mestimateNode.GetOutput(0) },
-        Arguments = { ("mv_type", "fp") }
-    });
-
-
-var sinkNode = graph.AddVideoBufferSink(codecviewNode.GetOutput(0));
+var sinkNode = graph.AddVideoBufferSink(parsedSegment["out"]);
 
 graph.Configure();
 
