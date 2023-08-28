@@ -234,6 +234,37 @@ public unsafe class VideoFrame : MediaFrame
 
         File.WriteAllBytes(filename, packet.Data.ToArray());
     }
+
+    /// <summary> Decodes a single frame from the specified image or video file. </summary>
+    /// <remarks> This method may be susceptible to DoS attacks. Do not use with untrusted inputs. </remarks>
+    public static VideoFrame Load(string filename, TimeSpan? position = null)
+    {
+        using var demuxer = new MediaDemuxer(filename);
+        var stream = demuxer.FindBestStream(MediaTypes.Video) ?? throw new FormatException();
+
+        using var decoder = (VideoDecoder)demuxer.CreateStreamDecoder(stream);
+        using var packet = new MediaPacket();
+
+        var frame = new VideoFrame();
+
+        if (position != null && !demuxer.Seek(position.Value, SeekOptions.Forward)) {
+            //Position is past the stream duration, go back to the start or we won't get anything.
+            demuxer.Seek(TimeSpan.Zero, SeekOptions.Backward);
+        }
+
+        while (demuxer.Read(packet)) {
+            if (packet.StreamIndex != stream.Index) continue;
+
+            decoder.SendPacket(packet);
+
+            if (decoder.ReceiveFrame(frame)) {
+                return frame;
+            }
+        }
+
+        frame.Dispose();
+        throw new FormatException();
+    }
 }
 /// <summary> Flags to apply to hardware frame memory mappings. </summary>
 public enum HardwareFrameMappingFlags
