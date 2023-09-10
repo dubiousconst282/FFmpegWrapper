@@ -67,10 +67,18 @@ public unsafe readonly struct ContextOption
             ChannelLayout v => ffmpeg.av_opt_set_chlayout(obj, name, &v.Native, flags),
             AVPixelFormat v => ffmpeg.av_opt_set_pixel_fmt(obj, name, v, flags),
             AVSampleFormat v => ffmpeg.av_opt_set_sample_fmt(obj, name, v, flags),
+            byte[] v        => SetBinary(v)
         };
         if (ret < 0) {
             string className = Helpers.PtrToStringUTF8((*(AVClass**)obj)->class_name)!;
             ret.ThrowError($"Invalid option for {className} (trying to set {name} to {value.Type})");
+        }
+
+        int SetBinary(byte[] data)
+        {
+            fixed (byte* pData = data) {
+                return ffmpeg.av_opt_set_bin(obj, name, pData, data.Length, flags);
+            }
         }
     }
 
@@ -87,23 +95,10 @@ public unsafe readonly struct ContextOption
         return str;
     }
 
-    /// <summary> Returns a list of options accepted by the specified ffmpeg object. See <see cref="ffmpeg.av_opt_next"/>. </summary>
-    public static IReadOnlyList<ContextOption> GetOptions(void* obj)
-    {
-        var list = new List<ContextOption>();
-
-        AVOption* opt = null;
-        while ((opt = ffmpeg.av_opt_next(obj, opt)) != null) {
-            if (opt->type == AV_OPT_TYPE_CONST) continue;
-
-            list.Add(new ContextOption(opt));
-        }
-        return list;
-    }
-
-    /// <summary> Returns a list of options accepted by the specified ffmpeg object, skipping aliases and equivalents. </summary>
+    /// <summary> Returns a list of options accepted by the specified ffmpeg object. </summary>
+    /// <param name="removeAliases">Remove options that are short aliases to another.</param>
     /// <param name="skipDefaults"> Skip options whose value in <paramref name="obj"/> are set to default. </param>
-    public static IReadOnlyList<ContextOption> GetDisplayOptions(void* obj, bool skipDefaults = false)
+    public static IReadOnlyList<ContextOption> GetOptions(void* obj, bool removeAliases = true, bool skipDefaults = false)
     {
         var opts = new List<ContextOption>();
 
@@ -112,6 +107,10 @@ public unsafe readonly struct ContextOption
             if (iter->type == AV_OPT_TYPE_CONST || (skipDefaults && ffmpeg.av_opt_is_set_to_default(obj, iter) != 0)) continue;
 
             opts.Add(new ContextOption(iter));
+        }
+
+        if (!removeAliases) {
+            return opts;
         }
 
         opts.Sort((a, b) => a.Offset - b.Offset);
@@ -125,7 +124,7 @@ public unsafe readonly struct ContextOption
             while (i + 1 < opts.Count && opts[i + 1].Offset == opt.Offset) {
                 var aliasOpt = opts[i + 1];
 
-                if (aliasOpt.Type == AVOptionType.AV_OPT_TYPE_IMAGE_SIZE || aliasOpt.Name.Length > opt.Name.Length) {
+                if (aliasOpt.Type == AV_OPT_TYPE_IMAGE_SIZE || aliasOpt.Name.Length > opt.Name.Length) {
                     opt = aliasOpt;
                 }
                 i++;
@@ -133,7 +132,7 @@ public unsafe readonly struct ContextOption
 
             if (opt.Offset == nextIgnoredOffset) continue;
 
-            if (opt.Type == AVOptionType.AV_OPT_TYPE_IMAGE_SIZE) {
+            if (opt.Type == AV_OPT_TYPE_IMAGE_SIZE) {
                 nextIgnoredOffset = opt.Offset + 4; //Ignore next height option
             }
             opts[j++] = opt;
@@ -162,6 +161,7 @@ public readonly struct OptionValue
         ChannelLayout => AV_OPT_TYPE_CHLAYOUT,
         AVPixelFormat => AV_OPT_TYPE_PIXEL_FMT,
         AVSampleFormat => AV_OPT_TYPE_SAMPLE_FMT,
+        byte[]         => AV_OPT_TYPE_BINARY
     };
 
     public string AsString() => (string)_value;
@@ -171,6 +171,7 @@ public readonly struct OptionValue
     public ChannelLayout AsChannelLayout() => (ChannelLayout)_value;
     public AVPixelFormat AsPixelFormat() => (AVPixelFormat)_value;
     public AVSampleFormat AsSampleFormat() => (AVSampleFormat)_value;
+    public byte[] AsBinary() => (byte[])_value;
 
     public override string ToString() => _value.ToString();
 
@@ -181,4 +182,5 @@ public readonly struct OptionValue
     public static implicit operator OptionValue(ChannelLayout val) => new(val);
     public static implicit operator OptionValue(AVPixelFormat val) => new(val);
     public static implicit operator OptionValue(AVSampleFormat val) => new(val);
+    public static implicit operator OptionValue(byte[] val) => new(val);
 }

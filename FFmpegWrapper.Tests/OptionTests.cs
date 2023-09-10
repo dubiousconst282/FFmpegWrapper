@@ -8,7 +8,7 @@ public class OptionTests
     [Fact]
     public void GetOptions()
     {
-        var options = MediaCodec.GetEncoder("libx264").GetOptions();
+        var options = MediaCodec.GetEncoder("libx264").GetOptions(removeAliases: false);
         Assert.NotEmpty(options);
 
         var mestOpt = options.First(o => o.Name == "me_method");

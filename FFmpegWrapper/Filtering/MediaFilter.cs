@@ -25,7 +25,8 @@ public unsafe readonly struct MediaFilter
     }
 
     /// <summary> Returns a list of parameters accepted during initialization of an instance of this filter. </summary>
-    public IReadOnlyList<ContextOption> GetOptions() => ContextOption.GetOptions(&Handle->priv_class);
+    public IReadOnlyList<ContextOption> GetOptions(bool removeAliases = true)
+        => ContextOption.GetOptions(&Handle->priv_class, removeAliases);
 
     public static IEnumerable<MediaFilter> GetRegisteredFilters()
     {

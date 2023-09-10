@@ -194,7 +194,7 @@ public unsafe class MediaFilterGraph : FFObject
             }
 
             //Options
-            var displayOpts = ContextOption.GetDisplayOptions(node->priv, skipDefaults: true);
+            var displayOpts = ContextOption.GetOptions(node->priv, removeAliases: true, skipDefaults: true);
 
             for (int j = 0; j < displayOpts.Count; j++) {
                 var opt = displayOpts[j];
