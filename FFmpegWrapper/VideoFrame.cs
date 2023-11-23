@@ -1,4 +1,4 @@
-namespace FFmpeg.Wrapper;
+﻿namespace FFmpeg.Wrapper;
 
 public unsafe class VideoFrame : MediaFrame
 {
@@ -197,6 +197,13 @@ public unsafe class VideoFrame : MediaFrame
     public void Save(string filename, int quality = 90, int outWidth = 0, int outHeight = 0)
     {
         ThrowIfDisposed();
+
+        if (IsHardwareFrame) {
+            using var tmp = new VideoFrame();
+            TransferTo(tmp);
+            tmp.Save(filename, quality, outWidth, outHeight);
+            return;
+        }
 
         bool jpeg = filename.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
                     filename.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
