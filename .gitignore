@@ -5,3 +5,6 @@ build/
 .vs/
 
 logs/
+
+launchSettings.json
+.vscode/settings.json
