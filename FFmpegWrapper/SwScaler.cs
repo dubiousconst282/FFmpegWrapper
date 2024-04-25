@@ -68,7 +68,7 @@ public unsafe class SwScaler : FFObject
         CheckFrame(dst.Handle, OutputFormat, input: false);
 
         fixed (byte* pSrc = src) {
-            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { stride }, 0, dst.Height, dst.Handle->data, dst.Handle->linesize).CheckError();
+            ffmpeg.sws_scale(Handle, new[] { pSrc }, new[] { stride }, 0, InputFormat.Height, dst.Handle->data, dst.Handle->linesize).CheckError();
         }
     }
 
