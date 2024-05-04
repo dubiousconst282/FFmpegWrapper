@@ -214,7 +214,25 @@ public unsafe class VideoFrame : MediaFrame
         if (outWidth <= 0) outWidth = Width;
         if (outHeight <= 0) outHeight = Height;
 
-        using var encoder = new VideoEncoder(codec, new PictureFormat(outWidth, outHeight, pixFmt), Rational.One);
+        // SwScale fails to convert color range when pixel format and resolution are equal. See #6
+        if (jpeg && pixFmt == PixelFormat && outWidth == Width && outHeight == Height) {
+            using var rgbFrame = new VideoFrame(outWidth, outHeight, PixelFormats.RGBA);
+
+            // This seems to be redundant, but keeping for good sake.
+            rgbFrame.Colorspace = new PictureColorspace(AVColorSpace.AVCOL_SPC_RGB, AVColorPrimaries.AVCOL_PRI_BT470M, AVColorTransferCharacteristic.AVCOL_TRC_GAMMA22, AVColorRange.AVCOL_RANGE_JPEG);
+
+            using (var tempScaler = new SwScaler(Format, rgbFrame.Format, InterpolationMode.Bilinear | InterpolationMode.HighQuality)) {
+                tempScaler.SetColorspace(Colorspace, rgbFrame.Colorspace);
+                tempScaler.Convert(this, rgbFrame);
+            }
+            rgbFrame.Save(filename, quality, outWidth, outHeight);
+            return;
+        }
+
+        using var tempFrame = new VideoFrame(outWidth, outHeight, pixFmt);
+        using var encoder = new VideoEncoder(codec, tempFrame.Format, Rational.One);
+
+        tempFrame.Colorspace = Colorspace;
 
         if (jpeg) {
             //1-31
@@ -222,18 +240,18 @@ public unsafe class VideoFrame : MediaFrame
             encoder.MaxQuantizer = q;
             encoder.MinQuantizer = q;
             encoder.Handle->color_range = AVColorRange.AVCOL_RANGE_JPEG;
+            tempFrame.Handle->color_range = AVColorRange.AVCOL_RANGE_JPEG;
         } else {
             //zlib compression (0-9)
             encoder.CompressionLevel = quality * 9 / 100;
         }
         encoder.Open();
 
-        using var tempFrame = new VideoFrame(encoder.FrameFormat);
-        tempFrame.Colorspace = Colorspace;
-
-        using var sws = new SwScaler(Format, tempFrame.Format);
+        var scalerMode = quality >= 80 ? InterpolationMode.Bicubic | InterpolationMode.HighQuality : InterpolationMode.Bilinear;
+        using var sws = new SwScaler(Format, tempFrame.Format, scalerMode);
         sws.SetColorspace(this.Colorspace, tempFrame.Colorspace);
         sws.Convert(this, tempFrame);
+
         encoder.SendFrame(tempFrame);
 
         using var packet = new MediaPacket();
