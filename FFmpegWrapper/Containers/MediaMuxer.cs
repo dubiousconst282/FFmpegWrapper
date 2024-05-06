@@ -14,7 +14,7 @@ public unsafe class MediaMuxer : FFObject
     public IOContext? IOC { get; }
     readonly bool _iocLeaveOpen;
 
-    private List<(MediaStream Stream, MediaEncoder Encoder)> _streams = new();
+    private List<(MediaStream Stream, MediaEncoder? Encoder)> _streams = new();
     private MediaPacket? _tempPacket;
 
     public IReadOnlyList<MediaStream> Streams => _streams.Select(s => s.Stream).ToList();
@@ -49,7 +49,7 @@ public unsafe class MediaMuxer : FFObject
     }
 
     /// <summary> Creates and adds a new stream to the muxed file. </summary>
-    /// <remarks> The <paramref name="encoder"/> must be open before this is called. </remarks>
+    /// <remarks> The <paramref name="encoder"/> must not be open before this is called. </remarks>
     public MediaStream AddStream(MediaEncoder encoder)
     {
         ThrowIfDisposed();
@@ -78,6 +78,32 @@ public unsafe class MediaMuxer : FFObject
         return st;
     }
 
+    /// <summary>
+    /// Creates and adds a new stream to the muxed file, copying the codec parameters from the source stream.
+    /// </summary>
+    public MediaStream AddStream(MediaStream srcStream)
+    {
+        ThrowIfDisposed();
+        if (IsOpen) {
+            throw new InvalidOperationException("Cannot add new streams once the muxer is open.");
+        }
+
+        AVStream* stream = ffmpeg.avformat_new_stream(_ctx, null);
+        if (stream == null) {
+            throw new OutOfMemoryException("Could not allocate stream");
+        }
+
+        ffmpeg.avcodec_parameters_copy(stream->codecpar, srcStream.Handle->codecpar).CheckError("Failed to copy codec parameters");
+        stream->codecpar->codec_tag = 0;
+
+        stream->id = (int)_ctx->nb_streams - 1;
+        stream->time_base = srcStream.TimeBase;
+
+        var st = new MediaStream(stream);
+        _streams.Add((st, default));
+        return st;
+    }
+
     /// <summary> Opens all streams and writes the container header. </summary>
     /// <remarks> This method will also open all encoders passed to <see cref="AddStream(MediaEncoder)"/>. </remarks>
     public void Open()
@@ -96,6 +122,7 @@ public unsafe class MediaMuxer : FFObject
         }
 
         foreach (var (stream, encoder) in _streams) {
+            if (encoder is null) continue;
             encoder.Open();
             ffmpeg.avcodec_parameters_from_context(stream.Handle->codecpar, encoder.Handle).CheckError("Could not copy the encoder parameters to the stream.");
         }
