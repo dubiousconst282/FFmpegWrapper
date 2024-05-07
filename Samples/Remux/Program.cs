@@ -18,11 +18,9 @@ foreach (var srcStream in srcStreams) {
 remuxer.Open();
 
 using var packet = new MediaPacket();
-unsafe {
-    while (demuxer.Read(packet)) {
-        var index = packet.StreamIndex;
-        packet.RescaleTS(srcStreams[index].TimeBase, dstStreams[index].TimeBase);
-        packet.Handle->pos = -1;
-        remuxer.Write(packet);
-    }
+while (demuxer.Read(packet)) {
+    var index = packet.StreamIndex;
+    packet.RescaleTS(srcStreams[index].TimeBase, dstStreams[index].TimeBase);
+    packet.BytePosition = -1;
+    remuxer.Write(packet);
 }
