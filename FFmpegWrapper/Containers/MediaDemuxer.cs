@@ -35,7 +35,7 @@ public unsafe class MediaDemuxer : FFObject
         IOC = ioc;
         _iocLeaveOpen = leaveOpen;
     }
-    
+
     private MediaDemuxer(string? url, AVIOContext* pb)
     {
         _ctx = ffmpeg.avformat_alloc_context();
@@ -107,17 +107,31 @@ public unsafe class MediaDemuxer : FFObject
     }
 
     /// <summary> Seeks the demuxer to somewhere near <paramref name="timestamp"/>, according to <paramref name="options"/>. </summary>
+    /// <param name="stream">The stream to seek in. If null, a default stream is selected.</param>
     /// <remarks> If this method returns true, all open stream decoders must be flushed by calling <see cref="CodecBase.Flush"/>. </remarks>
     /// <exception cref="InvalidOperationException">If the underlying IO context doesn't support seeks.</exception>
-    public bool Seek(TimeSpan timestamp, SeekOptions options)
+    /// <exception cref="ArgumentException">If <paramref name="stream"/> is not owned by the demuxer.</exception>
+    public bool Seek(TimeSpan timestamp, SeekOptions options, MediaStream? stream = default)
     {
         ThrowIfDisposed();
 
         if (!CanSeek) {
             throw new InvalidOperationException("Backing IO context is not seekable.");
         }
-        long ts = ffmpeg.av_rescale(timestamp.Ticks, ffmpeg.AV_TIME_BASE, TimeSpan.TicksPerSecond);
-        return ffmpeg.av_seek_frame(_ctx, -1, ts, (int)options) == 0;
+
+        int streamIndex;
+        long ts;
+        if (stream is { }) {
+            streamIndex = stream.Index;
+            if (Streams[streamIndex] != stream) {
+                throw new ArgumentException("Specified stream is not owned by the demuxer.");
+            }
+            ts = ffmpeg.av_rescale_q(timestamp.Ticks, new Rational(1, (int)TimeSpan.TicksPerSecond), stream.TimeBase);
+        } else {
+            streamIndex = -1;
+            ts = ffmpeg.av_rescale(timestamp.Ticks, ffmpeg.AV_TIME_BASE, TimeSpan.TicksPerSecond);
+        }
+        return ffmpeg.av_seek_frame(_ctx, streamIndex, ts, (int)options) >= 0;
     }
 
     protected override void Free()
