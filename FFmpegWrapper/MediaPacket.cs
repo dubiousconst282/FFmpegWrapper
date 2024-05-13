@@ -47,7 +47,7 @@ public unsafe class MediaPacket : FFObject
         set => _pkt->flags = value ? (_pkt->flags | ffmpeg.AV_PKT_FLAG_KEY) : (_pkt->flags & ~ffmpeg.AV_PKT_FLAG_KEY);
     }
 
-    /// <summary> byte position in stream, -1 if unknown. </summary>
+    /// <inheritdoc cref="AVPacket.pos"/>
     public long BytePosition {
         get => _pkt->pos;
         set => _pkt->pos = value;
