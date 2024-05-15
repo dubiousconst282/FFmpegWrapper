@@ -37,13 +37,14 @@ public unsafe readonly struct MediaCodecParameters
     /// <inheritdoc cref="AVCodecParameters.level" />
     public int Level => Handle->level;
 
+    //Video fields
 
     /// <inheritdoc cref="AVCodecParameters.width" />
     public int Width => Handle->width;
 
     /// <inheritdoc cref="AVCodecParameters.width" />
     public int Height => Handle->height;
-    
+
     public AVPixelFormat PixelFormat => (AVPixelFormat)Handle->format;
 
     /// <inheritdoc cref="AVCodecParameters.sample_aspect_ratio" />
@@ -51,6 +52,8 @@ public unsafe readonly struct MediaCodecParameters
 
     public PictureFormat PictureFormat => new(Width, Height, PixelFormat, PixelAspectRatio);
 
+    /// <inheritdoc cref="AVCodecParameters.framerate"/>
+    public Rational FrameRate => Handle->framerate;
 
     /// <inheritdoc cref="AVCodecParameters.field_order" />
     public AVFieldOrder FieldOrder => Handle->field_order;

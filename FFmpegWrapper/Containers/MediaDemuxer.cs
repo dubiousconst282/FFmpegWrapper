@@ -134,6 +134,18 @@ public unsafe class MediaDemuxer : FFObject
         return ffmpeg.av_seek_frame(_ctx, streamIndex, ts, (int)options) >= 0;
     }
 
+    /// <inheritdoc cref="ffmpeg.av_guess_frame_rate(AVFormatContext*, AVStream*, AVFrame*)"/>
+    public Rational GuessFrameRate(MediaStream stream)
+    {
+        ThrowIfDisposed();
+
+        if (Streams[stream.Index] != stream) {
+            throw new ArgumentException("Specified stream is not owned by the demuxer.");
+        }
+
+        return ffmpeg.av_guess_frame_rate(_ctx, stream.Handle, null);
+    }
+
     protected override void Free()
     {
         if (_ctx != null) {

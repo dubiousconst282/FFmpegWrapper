@@ -63,7 +63,7 @@ public unsafe class MediaFilterGraph : FFObject
     }
 
     /// <param name="frameRate"> The frame rate of the input video. Must only be  set to a non-zero value if input stream has a known constant framerate and should be left at its initial value if the framerate is variable or unknown.</param>
-    public MediaBufferSource AddVideoBufferSource(PictureFormat format, Rational frameRate, Rational timeBase)
+    public MediaBufferSource AddVideoBufferSource(PictureFormat format, Rational frameRate, Rational timeBase, PictureColorspace? colorspace = default)
     {
         var pars = ffmpeg.av_buffersrc_parameters_alloc();
         pars->width = format.Width;
@@ -72,6 +72,10 @@ public unsafe class MediaFilterGraph : FFObject
         pars->frame_rate = frameRate;
         pars->sample_aspect_ratio = format.PixelAspectRatio;
         pars->time_base = timeBase;
+        if (colorspace.HasValue) {
+            pars->color_range = colorspace.Value.Range;
+            pars->color_space = colorspace.Value.Matrix;
+        }
         return AddBufferSource(pars, "buffer");
     }
 
