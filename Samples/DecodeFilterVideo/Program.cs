@@ -15,8 +15,7 @@ var inputStream = demuxer.FindBestStream(MediaTypes.Video)!;
 using var decoder = (VideoDecoder)demuxer.CreateStreamDecoder(inputStream);
 
 using var graph = new MediaFilterGraph();
-//var sourceNode = graph.AddVideoBufferSource(decoder.FrameFormat, decoder.FrameRate, inputStream.TimeBase);
-var sourceNode = graph.AddVideoBufferSource(decoder.FrameFormat, decoder.FrameRate, inputStream.TimeBase, decoder.Colorspace);
+var sourceNode = graph.AddVideoBufferSource(decoder.FrameFormat, decoder.Colorspace, inputStream.TimeBase, decoder.FrameRate);
 var parsedSegment = graph.Parse(filters, ("in", sourceNode.GetOutput(0)));
 var sinkNode = graph.AddVideoBufferSink(parsedSegment["out"]);
 graph.Configure();

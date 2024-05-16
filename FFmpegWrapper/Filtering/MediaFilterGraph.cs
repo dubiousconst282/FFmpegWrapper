@@ -63,7 +63,8 @@ public unsafe class MediaFilterGraph : FFObject
     }
 
     /// <param name="frameRate"> The frame rate of the input video. Must only be  set to a non-zero value if input stream has a known constant framerate and should be left at its initial value if the framerate is variable or unknown.</param>
-    public MediaBufferSource AddVideoBufferSource(PictureFormat format, Rational frameRate, Rational timeBase, PictureColorspace? colorspace = default)
+    [Obsolete("Use AddVideoBufferSource(PictureFormat format, PictureColorspace colorspace, Rational timeBase, Rational? frameRate)")]
+    public MediaBufferSource AddVideoBufferSource(PictureFormat format, Rational frameRate, Rational timeBase)
     {
         var pars = ffmpeg.av_buffersrc_parameters_alloc();
         pars->width = format.Width;
@@ -72,9 +73,26 @@ public unsafe class MediaFilterGraph : FFObject
         pars->frame_rate = frameRate;
         pars->sample_aspect_ratio = format.PixelAspectRatio;
         pars->time_base = timeBase;
-        if (colorspace.HasValue) {
-            pars->color_range = colorspace.Value.Range;
-            pars->color_space = colorspace.Value.Matrix;
+        return AddBufferSource(pars, "buffer");
+    }
+
+    /// <param name="frameRate"> 
+    /// The frame rate of the input video. 
+    /// Must only be set to a non-zero value if input stream has a known constant framerate and should be left at its initial value (0/0) if the framerate is variable or unknown.
+    /// See also <seealso cref="AVBufferSrcParameters.frame_rate"/> <seealso cref="AVFilterLink.frame_rate"/>
+    /// </param>
+    public MediaBufferSource AddVideoBufferSource(PictureFormat format, PictureColorspace colorspace, Rational timeBase, Rational? frameRate)
+    {
+        var pars = ffmpeg.av_buffersrc_parameters_alloc();
+        pars->width = format.Width;
+        pars->height = format.Height;
+        pars->format = (int)format.PixelFormat;
+        pars->sample_aspect_ratio = format.PixelAspectRatio;
+        pars->color_range = colorspace.Range;
+        pars->color_space = colorspace.Matrix;
+        pars->time_base = timeBase;
+        if (frameRate.HasValue) {
+            pars->frame_rate = frameRate.Value;
         }
         return AddBufferSource(pars, "buffer");
     }
@@ -176,7 +194,7 @@ public unsafe class MediaFilterGraph : FFObject
         var sb = new StringBuilder();
         for (int i = 0; i < _ctx->nb_filters; i++) {
             if (i != 0) sb.Append(",");
-            
+
             var node = _ctx->filters[i];
 
             //Input ports
