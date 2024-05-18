@@ -22,6 +22,7 @@ public abstract unsafe class MediaBufferSink : MediaFilterNode
     /// <param name="onlyIfBuffered"> If true, don't run the filter graph and return a null frame if there are none buffered in the sink. </param> 
     protected AVFrame* ReceiveFrame(bool onlyIfBuffered)
     {
+        // NOTE: av_buffersink_get_frame() will leak memory if the output frame is not empty.
         var frame = ffmpeg.av_frame_alloc();
         var result = (LavResult)ffmpeg.av_buffersink_get_frame_flags(Handle, frame, onlyIfBuffered ? ffmpeg.AV_BUFFERSINK_FLAG_NO_REQUEST : 0);
 

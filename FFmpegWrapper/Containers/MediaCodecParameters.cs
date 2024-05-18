@@ -68,10 +68,12 @@ public unsafe readonly struct MediaCodecParameters
     public AVColorTransferCharacteristic ColorTrc => Handle->color_trc;
 
     /// <inheritdoc cref="AVCodecParameters.color_space" />
-    public AVColorSpace ColorSpace => Handle->color_space;
+    public AVColorSpace ColorMatrix => Handle->color_space;
 
     /// <inheritdoc cref="AVCodecParameters.chroma_location" />
     public AVChromaLocation ChromaLocation => Handle->chroma_location;
+
+    public PictureColorspace Colorspace => new(ColorMatrix, ColorPrimaries, ColorTrc, ColorRange);
 
     /// <inheritdoc cref="AVCodecParameters.video_delay" />
     public int VideoDelay => Handle->video_delay;
@@ -103,4 +105,27 @@ public unsafe readonly struct MediaCodecParameters
     public AVSampleFormat SampleFormat => (AVSampleFormat)Handle->format;
 
     public AudioFormat AudioFormat => new(SampleFormat, SampleRate, ChannelLayout);
+
+    /// <summary> Returns the side data entry with the given type in <see cref="AVCodecParameters.coded_side_data"/>, or null if not present. </summary>
+    public AVPacketSideData* GetSideDataEntry(AVPacketSideDataType type)
+    {
+        return ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
+    }
+
+    /// <summary> Returns the side data payload with the given type in <see cref="AVCodecParameters.coded_side_data"/>, or an empty span if not present. </summary>
+    public ReadOnlySpan<byte> GetCodedSideData(AVPacketSideDataType type)
+    {
+        var sideData = ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
+        return sideData == null ? default : new ReadOnlySpan<byte>(sideData->data, (int)sideData->size);
+    }
+
+    /// <summary>
+    /// Returns the side data payload with the given type in <see cref="AVCodecParameters.coded_side_data"/> as <typeparamref name="T"/> pointer, 
+    /// or null if not present or if the payload is smaller than <c>sizeof(T)</c>.
+    /// </summary>
+    public T* GetSideData<T>(AVPacketSideDataType type) where T : unmanaged
+    {
+        var sideData = ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
+        return sideData == null || sideData->size < (ulong)sizeof(T) ? null : (T*)sideData->data;
+    }
 }
