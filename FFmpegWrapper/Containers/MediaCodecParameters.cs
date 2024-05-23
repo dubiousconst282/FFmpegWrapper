@@ -106,26 +106,6 @@ public unsafe readonly struct MediaCodecParameters
 
     public AudioFormat AudioFormat => new(SampleFormat, SampleRate, ChannelLayout);
 
-    /// <summary> Returns the side data entry with the given type in <see cref="AVCodecParameters.coded_side_data"/>, or null if not present. </summary>
-    public AVPacketSideData* GetSideDataEntry(AVPacketSideDataType type)
-    {
-        return ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
-    }
-
-    /// <summary> Returns the side data payload with the given type in <see cref="AVCodecParameters.coded_side_data"/>, or an empty span if not present. </summary>
-    public ReadOnlySpan<byte> GetCodedSideData(AVPacketSideDataType type)
-    {
-        var sideData = ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
-        return sideData == null ? default : new ReadOnlySpan<byte>(sideData->data, (int)sideData->size);
-    }
-
-    /// <summary>
-    /// Returns the side data payload with the given type in <see cref="AVCodecParameters.coded_side_data"/> as <typeparamref name="T"/> pointer, 
-    /// or null if not present or if the payload is smaller than <c>sizeof(T)</c>.
-    /// </summary>
-    public T* GetSideData<T>(AVPacketSideDataType type) where T : unmanaged
-    {
-        var sideData = ffmpeg.av_packet_side_data_get(Handle->coded_side_data, Handle->nb_coded_side_data, type);
-        return sideData == null || sideData->size < (ulong)sizeof(T) ? null : (T*)sideData->data;
-    }
+    /// <inheritdoc cref="AVCodecParameters.coded_side_data"/>
+    public PacketSideDataList CodedSideData => new(&Handle->coded_side_data, &Handle->nb_coded_side_data);
 }
