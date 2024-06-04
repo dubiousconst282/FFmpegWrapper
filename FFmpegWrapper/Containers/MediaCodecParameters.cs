@@ -37,13 +37,14 @@ public unsafe readonly struct MediaCodecParameters
     /// <inheritdoc cref="AVCodecParameters.level" />
     public int Level => Handle->level;
 
+    //Video fields
 
     /// <inheritdoc cref="AVCodecParameters.width" />
     public int Width => Handle->width;
 
     /// <inheritdoc cref="AVCodecParameters.width" />
     public int Height => Handle->height;
-    
+
     public AVPixelFormat PixelFormat => (AVPixelFormat)Handle->format;
 
     /// <inheritdoc cref="AVCodecParameters.sample_aspect_ratio" />
@@ -51,6 +52,8 @@ public unsafe readonly struct MediaCodecParameters
 
     public PictureFormat PictureFormat => new(Width, Height, PixelFormat, PixelAspectRatio);
 
+    /// <inheritdoc cref="AVCodecParameters.framerate"/>
+    public Rational FrameRate => Handle->framerate;
 
     /// <inheritdoc cref="AVCodecParameters.field_order" />
     public AVFieldOrder FieldOrder => Handle->field_order;
@@ -65,10 +68,12 @@ public unsafe readonly struct MediaCodecParameters
     public AVColorTransferCharacteristic ColorTrc => Handle->color_trc;
 
     /// <inheritdoc cref="AVCodecParameters.color_space" />
-    public AVColorSpace ColorSpace => Handle->color_space;
+    public AVColorSpace ColorMatrix => Handle->color_space;
 
     /// <inheritdoc cref="AVCodecParameters.chroma_location" />
     public AVChromaLocation ChromaLocation => Handle->chroma_location;
+
+    public PictureColorspace Colorspace => new(ColorMatrix, ColorPrimaries, ColorTrc, ColorRange);
 
     /// <inheritdoc cref="AVCodecParameters.video_delay" />
     public int VideoDelay => Handle->video_delay;
@@ -100,4 +105,7 @@ public unsafe readonly struct MediaCodecParameters
     public AVSampleFormat SampleFormat => (AVSampleFormat)Handle->format;
 
     public AudioFormat AudioFormat => new(SampleFormat, SampleRate, ChannelLayout);
+
+    /// <inheritdoc cref="AVCodecParameters.coded_side_data"/>
+    public PacketSideDataList CodedSideData => new(&Handle->coded_side_data, &Handle->nb_coded_side_data);
 }

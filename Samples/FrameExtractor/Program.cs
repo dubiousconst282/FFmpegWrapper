@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using FFmpeg.Wrapper;
 
 if (args.Length < 3) {
@@ -8,12 +10,17 @@ string inputPath = args[0];
 string outDir = args[1];
 int numFrames = int.Parse(args[2]);
 
+Directory.CreateDirectory(outDir);
+
 using var demuxer = new MediaDemuxer(inputPath);
 
 var stream = demuxer.FindBestStream(MediaTypes.Video)!;
 using var decoder = (VideoDecoder)demuxer.CreateStreamDecoder(stream);
 using var packet = new MediaPacket();
 using var frame = new VideoFrame();
+using var filter = MediaFilterPipeline.CreateBuilder()
+                                      .VideoBufferSource(decoder, autoRotate: true)
+                                      .Build();
 
 for (int i = 0; i < numFrames; i++) {
     demuxer.Seek(demuxer.Duration!.Value * ((i + 0.5) / numFrames), SeekOptions.Forward);
@@ -24,10 +31,10 @@ for (int i = 0; i < numFrames; i++) {
         if (packet.StreamIndex != stream.Index) continue; //Ignore packets from other streams
 
         decoder.SendPacket(packet);
-        
+
         if (decoder.ReceiveFrame(frame)) {
             var ts = stream.GetTimestamp(frame.PresentationTimestamp!.Value);
-            Directory.CreateDirectory(outDir);
+            filter.Apply(frame);
             frame.Save($"{outDir}/{i}_{ts:hh\\.mm\\.ss}.jpg");
             break;
         }

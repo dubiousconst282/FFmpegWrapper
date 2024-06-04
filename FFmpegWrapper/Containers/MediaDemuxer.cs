@@ -87,6 +87,13 @@ public unsafe class MediaDemuxer : FFObject
             _ => throw new NotSupportedException($"Stream type {stream.Type} is not supported."),
         };
         ffmpeg.avcodec_parameters_to_context(decoder.Handle, stream.Handle->codecpar).CheckError("Could not copy stream parameters to the decoder.");
+        
+        // Fixup some unset properties for consistency 
+        decoder.TimeBase = stream.TimeBase;
+
+        if (stream.Type == MediaTypes.Video && decoder.FrameRate == Rational.Zero) {
+            decoder.FrameRate = GuessFrameRate(stream);
+        }
 
         if (open) decoder.Open();
 
@@ -132,6 +139,18 @@ public unsafe class MediaDemuxer : FFObject
             ts = ffmpeg.av_rescale(timestamp.Ticks, ffmpeg.AV_TIME_BASE, TimeSpan.TicksPerSecond);
         }
         return ffmpeg.av_seek_frame(_ctx, streamIndex, ts, (int)options) >= 0;
+    }
+
+    /// <inheritdoc cref="ffmpeg.av_guess_frame_rate(AVFormatContext*, AVStream*, AVFrame*)"/>
+    public Rational GuessFrameRate(MediaStream stream)
+    {
+        ThrowIfDisposed();
+
+        if (Streams[stream.Index] != stream) {
+            throw new ArgumentException("Specified stream is not owned by the demuxer.");
+        }
+
+        return ffmpeg.av_guess_frame_rate(_ctx, stream.Handle, null);
     }
 
     protected override void Free()

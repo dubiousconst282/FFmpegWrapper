@@ -50,14 +50,14 @@ encoder.SetOption("preset", "fast");
 encoder.SetOption("rc-lookahead", "5");
 
 var stream = muxer.AddStream(encoder);
-
 muxer.Open();
 
-while (true) {
-    using var frame = sinkNode.ReceiveFrame() ?? throw new Exception("Could not get frame from filter sink");
-    
-    muxer.EncodeAndWrite(stream, encoder, frame);
+using var frame = new VideoFrame();
 
+while (true) {
+    if (sinkNode.ReceiveFrame(frame)) {
+        muxer.EncodeAndWrite(stream, encoder, frame);
+    }
     var timestamp = Rational.GetTimeSpan(frame.PresentationTimestamp!.Value, encoder.TimeBase);
     Console.WriteLine(timestamp);
     if (timestamp.TotalSeconds >= 15) break;

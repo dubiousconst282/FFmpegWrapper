@@ -129,6 +129,7 @@ public unsafe class SwScaler : FFObject
     }
 }
 
+[Flags]
 public enum InterpolationMode
 {
     FastBilinear    = ffmpeg.SWS_FAST_BILINEAR,

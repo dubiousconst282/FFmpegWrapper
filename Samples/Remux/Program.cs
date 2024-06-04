@@ -1,9 +1,9 @@
-﻿// https://github.com/FFmpeg/FFmpeg/blob/master/doc/examples/remux.c
+﻿using FFmpeg.Wrapper;
 
-using FFmpeg.Wrapper;
+// https://github.com/FFmpeg/FFmpeg/blob/master/doc/examples/remux.c
 
 if (args.Length < 2) {
-    Console.WriteLine("Usage: Remux <input path> <output path.mkv>");
+    Console.WriteLine("Usage: Remux <input path> <output path>");
     return;
 }
 

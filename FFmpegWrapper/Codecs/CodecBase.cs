@@ -46,6 +46,9 @@ public unsafe abstract class CodecBase : FFObject
 
     public AVMediaType CodecType => _ctx->codec_type;
 
+    /// <inheritdoc cref="AVCodecContext.coded_side_data"/>
+    public PacketSideDataList CodedSideData => new(&_ctx->coded_side_data, &_ctx->nb_coded_side_data); 
+
     internal CodecBase(AVCodecContext* ctx, AVMediaType expectedType, bool takeOwnership)
     {
         if (ctx->codec->type != expectedType) {

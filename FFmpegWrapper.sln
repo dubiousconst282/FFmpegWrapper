@@ -19,11 +19,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HWEncode", "Samples\HWEncod
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AVTranscode", "Samples\AVTranscode\AVTranscode.csproj", "{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Filtering", "Samples\Filtering\Filtering.csproj", "{35992514-47D1-4F86-9298-CCC73163A0E1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AVFiltering", "Samples\AVFiltering\AVFiltering.csproj", "{35992514-47D1-4F86-9298-CCC73163A0E1}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFmpegWrapper.Tests", "FFmpegWrapper.Tests\FFmpegWrapper.Tests.csproj", "{19E971C2-414C-4102-9F5C-8D3B6C775580}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Remux", "Samples\Remux\Remux.csproj", "{6BA9A2DE-0E08-4810-B241-A4800719EDC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Remux", "Samples\Remux\Remux.csproj", "{6BA9A2DE-0E08-4810-B241-A4800719EDC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecodeFilterVideo", "Samples\DecodeFilterVideo\DecodeFilterVideo.csproj", "{60685B06-34C5-4A44-8B38-50C46EAA82BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScreenCap", "Samples\ScreenCap\ScreenCap.csproj", "{8D870B54-D42D-4DB8-995F-53DA564688E5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +75,14 @@ Global
 		{6BA9A2DE-0E08-4810-B241-A4800719EDC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BA9A2DE-0E08-4810-B241-A4800719EDC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BA9A2DE-0E08-4810-B241-A4800719EDC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60685B06-34C5-4A44-8B38-50C46EAA82BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60685B06-34C5-4A44-8B38-50C46EAA82BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60685B06-34C5-4A44-8B38-50C46EAA82BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60685B06-34C5-4A44-8B38-50C46EAA82BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D870B54-D42D-4DB8-995F-53DA564688E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D870B54-D42D-4DB8-995F-53DA564688E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D870B54-D42D-4DB8-995F-53DA564688E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D870B54-D42D-4DB8-995F-53DA564688E5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -84,6 +96,8 @@ Global
 		{76FF5717-BD7E-4267-95A0-4AF5F3D29B0A} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 		{35992514-47D1-4F86-9298-CCC73163A0E1} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 		{6BA9A2DE-0E08-4810-B241-A4800719EDC7} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
+		{60685B06-34C5-4A44-8B38-50C46EAA82BA} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
+		{8D870B54-D42D-4DB8-995F-53DA564688E5} = {3D89B1B5-F184-4451-86F6-A05A52E261E4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FBB6A4C7-BCD6-45BD-A659-7BADD859E7D4}

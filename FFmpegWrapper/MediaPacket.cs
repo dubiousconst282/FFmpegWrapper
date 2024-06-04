@@ -57,6 +57,8 @@ public unsafe class MediaPacket : FFObject
         get => new(_pkt->data, _pkt->size);
     }
 
+    public PacketSideDataList SideData => new(&_pkt->side_data, &_pkt->side_data_elems);
+
     public MediaPacket()
     {
         _pkt = ffmpeg.av_packet_alloc();
