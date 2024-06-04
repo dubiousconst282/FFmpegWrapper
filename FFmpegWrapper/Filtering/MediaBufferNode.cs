@@ -34,6 +34,16 @@ public abstract unsafe class MediaBufferSink : MediaFilterNode
         }
         return result < 0 ? null : frame;
     }
+
+    /// <summary> Gets a frame with filtered data from the sink, if one is available. </summary>
+    /// <param name="onlyIfBuffered"> If true, don't run the filter graph and return a null frame if there are none buffered in the sink. </param> 
+    public bool ReceiveFrame(MediaFrame frame, bool onlyIfBuffered = false)
+    {
+        // NOTE: av_buffersink_get_frame() will leak memory if the output frame is not empty.
+        ffmpeg.av_frame_unref(frame.Handle);
+        var result = (LavResult)ffmpeg.av_buffersink_get_frame_flags(Handle, frame.Handle, onlyIfBuffered ? ffmpeg.AV_BUFFERSINK_FLAG_NO_REQUEST : 0);
+        return result.IsSuccess();
+    }
 }
 
 public unsafe class AudioBufferSink : MediaBufferSink
@@ -57,6 +67,7 @@ public unsafe class AudioBufferSink : MediaBufferSink
     }
 
     /// <inheritdoc cref="MediaBufferSink.ReceiveFrame(bool)"/>
+    [Obsolete("Prefer to use `MediaBufferSink.ReceiveFrame(MediaFrame, bool)` instead.")]
     public new AudioFrame? ReceiveFrame(bool onlyIfBuffered = false)
     {
         var frame = base.ReceiveFrame(onlyIfBuffered);
@@ -86,6 +97,7 @@ public unsafe class VideoBufferSink : MediaBufferSink
     }
 
     /// <inheritdoc cref="MediaBufferSink.ReceiveFrame(bool)"/>
+    [Obsolete("Prefer to use `MediaBufferSink.ReceiveFrame(MediaFrame, bool)` instead.")]
     public new VideoFrame? ReceiveFrame(bool onlyIfBuffered = false)
     {
         var frame = base.ReceiveFrame(onlyIfBuffered);

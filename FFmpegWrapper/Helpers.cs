@@ -50,6 +50,15 @@ internal static unsafe class Helpers
         int length = span.IndexOf((byte)0);
         return Encoding.UTF8.GetString(ptr, length);
     }
+    public static bool StrCmp(byte* a, ReadOnlySpan<byte> b)
+    {
+        for (int i = 0; i < b.Length; i++) {
+            if (a[i] == 0 || a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     public static long? GetPTS(long pts) => pts != ffmpeg.AV_NOPTS_VALUE ? pts : null;
     public static void SetPTS(ref long pts, long? value) => pts = value ?? ffmpeg.AV_NOPTS_VALUE;
@@ -61,4 +70,9 @@ internal static unsafe class Helpers
         }
         return Rational.GetTimeSpan(pts, timeBase);
     }
+
+
+#if !NETSTANDARD2_1_OR_GREATER
+    public static void Deconstruct<K, V>(this KeyValuePair<K, V> pair, out K key, out V val) => (key, val) = (pair.Key, pair.Value);
+#endif
 }

@@ -87,6 +87,13 @@ public unsafe class MediaDemuxer : FFObject
             _ => throw new NotSupportedException($"Stream type {stream.Type} is not supported."),
         };
         ffmpeg.avcodec_parameters_to_context(decoder.Handle, stream.Handle->codecpar).CheckError("Could not copy stream parameters to the decoder.");
+        
+        // Fixup some unset properties for consistency 
+        decoder.TimeBase = stream.TimeBase;
+
+        if (stream.Type == MediaTypes.Video && decoder.FrameRate == Rational.Zero) {
+            decoder.FrameRate = GuessFrameRate(stream);
+        }
 
         if (open) decoder.Open();
 

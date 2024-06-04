@@ -304,6 +304,11 @@ public readonly struct MediaFilterNodePort
 {
     public MediaFilterNode Node { get; }
     public int Index { get; }
+    
+    public unsafe AVMediaType Type => ffmpeg.avfilter_pad_get_type(Node.Handle->output_pads, Index);
+
+    /// <summary> Whether this port has been connected to a filter input. </summary>
+    public unsafe bool IsConnected => Node.Handle->outputs[Index] != null;
 
     public MediaFilterNodePort(MediaFilterNode node, int index)
     {
