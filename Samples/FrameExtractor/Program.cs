@@ -12,6 +12,8 @@ int numFrames = int.Parse(args[2]);
 
 Directory.CreateDirectory(outDir);
 
+FFmpegUtils.SetLoggerCallback(FFmpegLogLevel.Verbose);
+
 using var demuxer = new MediaDemuxer(inputPath);
 
 var stream = demuxer.FindBestStream(MediaTypes.Video)!;
