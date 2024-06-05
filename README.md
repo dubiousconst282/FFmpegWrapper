@@ -7,26 +7,28 @@ Low level, mostly safe FFmpeg API wrappers built on top of [FFmpeg.AutoGen](http
 ---
 
 Using the FFmpeg API tends to be tedious and error prone due to the amount of struct setup, memory management, and vague error codes.  
-This library aims to provide safe idiomatic wrappers and utility functions around several APIs, to facilitate development of media applications.
+This library aims to provide idiomatic wrappers and utility functions around several APIs, to facilitate development of media applications.
 
-## Examples
-The easiest way to get started may be by looking at the code samples listed below. The wrappers do not diverge too much from their native counterparts, so familiarity with the native API may help with more complicated use cases.
+## Samples
+The samples below show how to use the wrappers for common tasks. Familiarity with the native FFmpeg API may help with more complicated use cases.
 
 - [Extracting video frames](./Samples/FrameExtractor/Program.cs)
 - [Encoding generated audio and video](./Samples/AVEncode/Program.cs)
-- [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
-- [Mini OpenGL player w/ hardware decoding](./Samples/GLPlayer/)
-- [Hardware encoding](./Samples/HWEncode/ShaderRecWindow.cs)
 - [Transcoding audio and video](./Samples/AVTranscode/Program.cs)
-- [Building and rendering filter graphs](./Samples/Filtering/Program.cs)
+- [Remuxing](./Samples/Remux/Program.cs)
+- [Filtering video](./Samples/DecodeFilterVideo/Program.cs)
+- [Filtering audio and video](./Samples/AVFiltering/Program.cs)
+
+Misc:
+- [Hardware encoding](./Samples/HWEncode/ShaderRecWindow.cs)
+- [Mini OpenGL player with hardware decoding](./Samples/GLPlayer/)
+- [Screen capture using filter graph node API](./Samples/ScreenCap/Program.cs)
+- [Encoding SkiaSharp bitmaps (swscaler color conversion)](./Samples/SkiaInterop/Program.cs)
 
 On Windows, FFmpeg binaries must be manually copied to the build directory, or specified through `ffmpeg.RootPath` as [explained here](https://github.com/Ruslan-B/FFmpeg.AutoGen#usage).
 
 # Introduction
 Write-up on a few key FFmpeg concepts and the wrapper.
-
-## Codecs and Containers
-^TODO
 
 ## Frames and Formats
 Uncompressed audio and video frames can be represented in numerous different ways. Video frames are defined by resolution, colorspace, and pixel format; while audio frames are defined by sample rate, channel layout, and sample format.
@@ -151,10 +153,6 @@ while (decoder.ReceiveFrame(decodedFrame)) {
 ```
 
 Most encoders can take normal software frames without any additional ceremony, but when that is not possible, hardware frames must be allocated via `HardwareFramePool`.
-
-## Filters
-
-^TODO?
 
 ## GC and Unmanaged Memory Lifetimes
 Most wrappers use GC finalizers to free unmanaged memory in case `Dispose()` fails to be called. When accessing unmanaged properties from the wrappers (e.g. `Handle` properties, and span-returning methods such as `Frame.GetSpan()`), users should ensure that wrapper objects are not collected by the GC while unmanaged memory is in use, otherwise it could be freed by the finalizer.  
