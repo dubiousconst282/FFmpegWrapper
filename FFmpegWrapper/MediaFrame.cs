@@ -27,6 +27,9 @@ public unsafe abstract class MediaFrame : FFObject
         set => _frame->duration = value ?? 0;
     }
 
+    /// <inheritdoc cref="AVFrame.side_data"/>
+    public FrameSideDataList SideData => new(_frame);
+
     protected override void Free()
     {
         if (_frame != null && _ownsFrame) {

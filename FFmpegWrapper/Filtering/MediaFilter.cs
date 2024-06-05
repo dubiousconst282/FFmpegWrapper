@@ -86,7 +86,7 @@ public enum MediaFilterFlags
     /// <summary>
     /// The filter can create hardware frames using AVFilterContext.hw_device_ctx.
     /// </summary>
-    HardwareDevice = 1 << 4, //TODO: use ffmpeg.AVFILTER_FLAG_HWDEVICE once AG updates,
+    HardwareDevice = ffmpeg.AVFILTER_FLAG_HWDEVICE,
 
     /// <summary>
     /// Some filters support a generic "enable" expression option that can be used

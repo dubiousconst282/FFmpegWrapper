@@ -1,5 +1,6 @@
 ﻿namespace FFmpegWrapper.Tests;
 
+using FFmpeg.AutoGen;
 using FFmpeg.Wrapper;
 
 public class FrameTests
@@ -60,5 +61,23 @@ public class FrameTests
         Assert.Equal(AudioChannel.FrontLeft, b.GetChannel(0));
         Assert.Equal(AudioChannel.FrontCenter, b.GetChannel(1));
         Assert.Equal(AudioChannel.FrontRight, b.GetChannel(2));
+    }
+
+    [Fact]
+    public void SideData_Integration()
+    {
+        using var frame = new VideoFrame(128, 128, PixelFormats.RGBA);
+
+        Assert.Equal(0, frame.SideData.Count);
+
+        var entry1 = frame.SideData.Add(AVFrameSideDataType.AV_FRAME_DATA_DISPLAYMATRIX, 9 * 4);
+        var entry2 = frame.SideData.Add(AVFrameSideDataType.AV_FRAME_DATA_DETECTION_BBOXES, 128);
+        Assert.Equal(2, frame.SideData.Count);
+
+        Assert.Equal(9 * 4, entry1.Data.Length);
+        Assert.NotNull(frame.SideData.GetDisplayMatrix());
+
+        frame.SideData.Remove(AVFrameSideDataType.AV_FRAME_DATA_DISPLAYMATRIX);
+        Assert.Equal(1, frame.SideData.Count);
     }
 }

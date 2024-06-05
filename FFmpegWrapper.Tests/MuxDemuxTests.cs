@@ -68,6 +68,25 @@ public unsafe class MuxDemuxTests
     }
 
     [Fact]
+    public void PacketSideData_Integration()
+    {
+        using var packet = new MediaPacket();
+
+        Assert.Equal(0, packet.SideData.Count);
+
+        var entry1 = packet.SideData.Add(AVPacketSideDataType.AV_PKT_DATA_DISPLAYMATRIX, 9 * 4);
+        var entry2 = packet.SideData.Add(AVPacketSideDataType.AV_PKT_DATA_PALETTE, ffmpeg.AVPALETTE_SIZE);
+        var entry3 = packet.SideData.Add(AVPacketSideDataType.AV_PKT_DATA_DISPLAYMATRIX, 9 * 4);
+        Assert.Equal(2, packet.SideData.Count);
+
+        Assert.Equal(9 * 4, entry1.Data.Length);
+        Assert.NotNull(packet.SideData.GetDisplayMatrix());
+
+        packet.SideData.Remove(AVPacketSideDataType.AV_PKT_DATA_DISPLAYMATRIX);
+        Assert.Equal(1, packet.SideData.Count);
+    }
+
+    [Fact]
     public void DemuxMetadata()
     {
         var demuxer = new MediaDemuxer("Resources/demux_test.mkv");
