@@ -15,6 +15,7 @@ public unsafe class MediaDemuxer : FFObject
 
     public IOContext? IOC { get; }
     readonly bool _iocLeaveOpen;
+    readonly bool _ownsCtx;
 
     public TimeSpan? Duration => Helpers.GetTimeSpan(_ctx->duration, new Rational(1, ffmpeg.AV_TIME_BASE));
 
@@ -26,35 +27,68 @@ public unsafe class MediaDemuxer : FFObject
 
     public bool CanSeek => _ctx->pb->seek.Pointer != IntPtr.Zero;
 
-    public MediaDemuxer(string filename)
-        : this(filename, null) { }
+    /// <summary> Opens an existing resource URL for demuxing. </summary>
+    /// <remarks>
+    /// Note that this constructor accepts URLs for other than files, as supported by FFmpeg. <br/>
+    /// If that is not desirable, ensure that <paramref name="url"/> points to a valid file path prior to instantiation (via <see cref="File.Exists(string)"/>), 
+    /// or use <see cref="MediaDemuxer(string, IEnumerable{KeyValuePair{string, string}})"/> with the
+    /// <c>protocol_whitelist=file</c> option.
+    /// </remarks>
+    public MediaDemuxer(string url)
+        : this(CreateContext(url, null, null), takeOwnership: true) { }
 
     public MediaDemuxer(IOContext ioc, bool leaveOpen = false)
-        : this(null, ioc.Handle)
+        : this(CreateContext(null, ioc.Handle, null), takeOwnership: true)
     {
         IOC = ioc;
         _iocLeaveOpen = leaveOpen;
     }
 
-    private MediaDemuxer(string? url, AVIOContext* pb)
+    /// <summary> Opens an existing resource URL for demuxing. </summary>
+    /// <remarks> See https://ffmpeg.org/ffmpeg-formats.html, https://ffmpeg.org/ffmpeg-protocols.html </remarks>
+    /// <param name="options"> A dictionary filled with AVFormatContext and demuxer-private options. </param>
+    public MediaDemuxer(string url, IEnumerable<KeyValuePair<string, string>> options)
+        : this(CreateContext(url, null, options), takeOwnership: true) { }
+
+    /// <summary> Wraps a pointer to an open <see cref="AVFormatContext"/>. </summary>
+    /// <param name="takeOwnership">True if <paramref name="ctx"/> should be freed when Dispose() is called.</param>
+    public MediaDemuxer(AVFormatContext* ctx, bool takeOwnership)
     {
-        _ctx = ffmpeg.avformat_alloc_context();
-        if (_ctx == null) {
-            throw new OutOfMemoryException("Could not allocate demuxer.");
-        }
-
-        _ctx->pb = pb;
-        fixed (AVFormatContext** c = &_ctx) {
-            ffmpeg.avformat_open_input(c, url, null, null).CheckError("Could not open input");
-        }
-
-        ffmpeg.avformat_find_stream_info(_ctx, null).CheckError("Could not find stream information");
+        _ctx = ctx;
+        _ownsCtx = takeOwnership;
 
         var streams = ImmutableArray.CreateBuilder<MediaStream>((int)_ctx->nb_streams);
         for (int i = 0; i < _ctx->nb_streams; i++) {
             streams.Add(new MediaStream(_ctx->streams[i]));
         }
         Streams = streams.MoveToImmutable();
+    }
+    
+    private static AVFormatContext* CreateContext(string? url, AVIOContext* pb, IEnumerable<KeyValuePair<string, string>>? options)
+    {
+        var ctx = ffmpeg.avformat_alloc_context();
+        if (ctx == null) {
+            throw new OutOfMemoryException("Could not allocate demuxer.");
+        }
+
+        ctx->pb = pb;
+
+        AVDictionary* rawOpts = null;
+        MediaDictionary.Populate(&rawOpts, options);
+
+        ffmpeg.avformat_open_input(&ctx, url, null, &rawOpts).CheckError("Could not open input");
+
+        try {
+            if (ffmpeg.av_dict_count(rawOpts) > 0) {
+                string invalidKeys = string.Join("', '", new MediaDictionary(&rawOpts).Select(e => e.Key));
+                throw new InvalidOperationException($"Unknown or invalid demuxer options (keys: '{invalidKeys}')");
+            }
+        } finally {
+            ffmpeg.av_dict_free(&rawOpts);
+        }
+
+        ffmpeg.avformat_find_stream_info(ctx, null).CheckError("Could not find stream information");
+        return ctx;
     }
 
     /// <summary> Find the "best" stream in the file. The best stream is determined according to various heuristics as the most likely to be what the user expects. </summary>
@@ -155,7 +189,7 @@ public unsafe class MediaDemuxer : FFObject
 
     protected override void Free()
     {
-        if (_ctx != null) {
+        if (_ctx != null && _ownsCtx) {
             fixed (AVFormatContext** c = &_ctx) ffmpeg.avformat_close_input(c);
         }
         if (!_iocLeaveOpen) {

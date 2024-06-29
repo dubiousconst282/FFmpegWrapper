@@ -13,6 +13,7 @@ public unsafe class MediaMuxer : FFObject
 
     public IOContext? IOC { get; }
     readonly bool _iocLeaveOpen;
+    readonly bool _ownsCtx;
 
     private List<(MediaStream Stream, MediaEncoder? Encoder)> _streams = new();
     private MediaPacket? _tempPacket;
@@ -46,6 +47,14 @@ public unsafe class MediaMuxer : FFObject
         }
         _ctx->oformat = format;
         _ctx->pb = ioc.Handle;
+    }
+
+    /// <summary> Wraps a pointer to an open <see cref="AVFormatContext"/>. </summary>
+    /// <param name="takeOwnership">True if <paramref name="ctx"/> should be freed when Dispose() is called.</param>
+    public MediaMuxer(AVFormatContext* ctx, bool takeOwnership)
+    {
+        _ctx = ctx;
+        _ownsCtx = takeOwnership;
     }
 
     /// <summary> Creates and adds a new stream to the muxed file. </summary>
@@ -128,9 +137,7 @@ public unsafe class MediaMuxer : FFObject
         }
 
         AVDictionary* rawOpts = null;
-        foreach (var entry in options) {
-            ffmpeg.av_dict_set(&rawOpts, entry.Key, entry.Value, 0);
-        }
+        MediaDictionary.Populate(&rawOpts, options);
 
         ffmpeg.avformat_write_header(_ctx, &rawOpts).CheckError("Could not write header to output file");
 
@@ -205,11 +212,12 @@ public unsafe class MediaMuxer : FFObject
         if (_ctx != null) {
             ffmpeg.av_write_trailer(_ctx);
 
-            if (IOC == null) {
-                ffmpeg.avio_closep(&_ctx->pb);
+            if (_ownsCtx) {
+                if (IOC == null) {
+                    ffmpeg.avio_closep(&_ctx->pb);
+                }
+                ffmpeg.avformat_free_context(_ctx);
             }
-
-            ffmpeg.avformat_free_context(_ctx);
             _ctx = null;
 
             if (!_iocLeaveOpen) {

@@ -53,6 +53,15 @@ public unsafe struct MediaDictionary : IEnumerable<Entry>
         return new Enumerator() { _dict = Handle, _entry = null };
     }
 
+    internal static void Populate(AVDictionary** dict, IEnumerable<Entry>? options)
+    {
+        if (options == null) return;
+
+        foreach (var entry in options) {
+            ffmpeg.av_dict_set(dict, entry.Key, entry.Value, 0);
+        }
+    }
+
     IEnumerator<Entry> IEnumerable<Entry>.GetEnumerator() => GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
